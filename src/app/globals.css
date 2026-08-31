@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root, .dark {
   --background: #0A0F1E;
   --foreground: #F0F4FF;
   --primary: #00C896;
@@ -33,6 +33,37 @@
   --info-bg: #0F1D35;
 }
 
+.light {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --primary: #0D9488;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #334155;
+  --accent: #EA580C;
+  --accent-foreground: #FFFFFF;
+  --muted: #E2E8F0;
+  --muted-foreground: #64748B;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --border: #E2E8F0;
+  --input: #FFFFFF;
+  --ring: #0D9488;
+  --radius: 10px;
+  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --critical: #DC2626;
+  --critical-bg: #FEF2F2;
+  --high: #EA580C;
+  --high-bg: #FFF7ED;
+  --moderate: #CA8A04;
+  --moderate-bg: #FEFCE8;
+  --low: #0D9488;
+  --low-bg: #F0FDFA;
+  --info: #2563EB;
+  --info-bg: #EFF6FF;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -44,6 +75,7 @@
     color: var(--foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   html {
@@ -86,15 +118,15 @@
   }
 
   .card-glow-primary {
-    box-shadow: 0 0 0 1px var(--border), 0 4px 24px rgba(0, 200, 150, 0.06);
+    box-shadow: 0 0 0 1px var(--border), 0 4px 20px rgba(0, 200, 150, 0.05);
   }
 
   .card-glow-critical {
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.3), 0 4px 24px rgba(239, 68, 68, 0.08);
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25), 0 4px 20px rgba(239, 68, 68, 0.06);
   }
 
   .card-glow-warning {
-    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.3), 0 4px 24px rgba(249, 115, 22, 0.08);
+    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.25), 0 4px 20px rgba(249, 115, 22, 0.06);
   }
 
   .pulse-dot {
@@ -127,7 +159,7 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm;
   }
 
   .btn-secondary {
@@ -135,7 +167,7 @@
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-critical text-white text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-critical text-white text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-95 shadow-sm;
   }
 
   .input-field {

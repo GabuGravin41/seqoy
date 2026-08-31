@@ -60,20 +60,22 @@ export default function PhoneDrawer() {
         }),
       });
       const textResponse = await res.text();
-      setUssdScreenText(textResponse);
+      // Strip technical telecom protocol prefix (CON/END) for authentic feature phone LCD display
+      const cleanDisplay = textResponse.replace(/^(CON|END)\s*/i, '');
+      setUssdScreenText(cleanDisplay);
 
       if (textResponse.startsWith('END')) {
         setUssdIsActive(false);
-        if (textResponse.includes('HATARI') || textResponse.includes('CRITICAL') || textResponse.includes('DHARURA')) {
+        if (textResponse.includes('HATARI') || textResponse.includes('CRITICAL') || textResponse.includes('DHARURA') || textResponse.includes('EMERGENCY')) {
           toast.error('Critical maternal danger sign recorded via USSD!', {
-            description: 'Patient EHR flagged for immediate referral transfer.',
+            description: 'Clinic midwife alerted for emergency transfer.',
           });
         } else {
-          toast.success('USSD Check-in submitted successfully');
+          toast.success('Maternal check-in logged successfully');
         }
       }
     } catch (e) {
-      setUssdScreenText('END Network connection error.');
+      setUssdScreenText('Mtandao haupatikani kwa sasa. Tafadhali piga tena *384*99#\n\nNetwork unavailable. Please retry.');
       setUssdIsActive(false);
     } finally {
       setUssdLoading(false);

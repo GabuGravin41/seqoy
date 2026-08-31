@@ -8,7 +8,7 @@ export interface USSDSessionParams {
 }
 
 export interface USSDResponse {
-  response: string; // Must start with "CON " or "END "
+  response: string; // Must start with "CON " or "END " for telecom gateways
   shouldSaveCheckin?: boolean;
   triageData?: {
     hasSevereHeadache: boolean;
@@ -26,14 +26,14 @@ export function handleUSSDSession(params: USSDSessionParams): USSDResponse {
   const { text } = params;
   const parts = text ? text.split("*") : [];
 
-  // Step 0: Root Menu
+  // Step 0: Root Welcome & Language Menu
   if (parts.length === 0 || text === "") {
     return {
-      response: `CON Karibu SEQOY Maternal Care / Welcome to SEQOY
+      response: `CON Karibu SEQOY Huduma ya Mama na Mtoto:
 Chagua Lugha / Select Language:
 1. Kiswahili
 2. English
-3. Msaada wa Dharura / Emergency SOS`,
+3. Msaada wa Haraka (Emergency SOS)`,
     };
   }
 
@@ -52,9 +52,9 @@ Chagua Lugha / Select Language:
       language: "SWAHILI",
     };
     return {
-      response: `END [DHARURA YA HARAKA]
-Taarifa ya dharura imetumwa kwa kituo chako cha afya mara moja. 
-Tafadhali kaa mahali salama. Wahudumu wa afya watawasiliana nawe sasa hivi. Piga 1199 ikiwa gari la dharura linahitajika.`,
+      response: `END [TAHADHARI YA HARAKA]
+Taarifa yako ya dharura imetumwa moja kwa moja kwa mkunga na kliniki yako.
+Tafadhali tulia na unywe maji. Wahudumu wa afya wanakupigia simu sasa hivi. Piga 1199 au 0800-720-999 kwa gari la wagonjwa.`,
       shouldSaveCheckin: true,
       triageData: triage,
     };
@@ -65,49 +65,48 @@ Tafadhali kaa mahali salama. Wahudumu wa afya watawasiliana nawe sasa hivi. Piga
     // Step 1: Main Swahili Menu
     if (parts.length === 1) {
       return {
-        response: `CON Huduma za SEQOY:
-1. Ripoti Hali ya Afya Leo (Check-in)
-2. Dalili za Hatari (Danger Signs)
-3. Tarehe ya Kliniki Inayofuata
-4. Msaada wa Dharura`,
+        response: `CON Huduma za SEQOY kwa Mama:
+1. Ripoti Hali Yako ya Leo (Check-in)
+2. Dalili za Hatari Wakati wa Mimba
+3. Tarehe ya Kliniki ya Wazazi
+4. Piga Simu ya Dharura`,
       };
     }
 
     const swahiliSubChoice = parts[1];
 
     if (swahiliSubChoice === "1") {
-      // Swahili Check-in Question 1: Kichwa & Macho
+      // Swahili Question 1: Kichwa & Macho
       if (parts.length === 2) {
         return {
-          response: `CON Je, una maumivu makali ya kichwa au macho kuona ukungu/giza?
-1. Ndio
-2. Hapana`,
+          response: `CON Je, unahisi maumivu makali ya kichwa yasiyopoa au macho kuona ukungu/giza?
+1. Ndio (Inauma / Sioni vizuri)
+2. Hapana (Niko sawa)`,
         };
       }
       // Question 2: Uvimbe & Kutokwa na Damu
       if (parts.length === 3) {
         return {
-          response: `CON Je, una uvimbe mkubwa miguuni/usoni au unatokwa na damu?
+          response: `CON Je, miguu/uso umevimba ghafla au unatokwa na damu ukeni?
 1. Ndio, Damu inatoka
 2. Ndio, Uvimbe mkubwa
 3. Zote mbili
-4. Hapana`,
+4. Hapana, Hakuna uvimbe wala damu`,
         };
       }
       // Question 3: Maumivu ya Tumbo & Mtoto kucheza
       if (parts.length === 4) {
         return {
-          response: `CON Je, mtoto anacheza vizuri na huna maumivu makali ya tumbo?
-1. Mtoto anacheza vizuri / Sina maumivu
-2. Mtoto hachezi vizuri au Tumbo linauma sana`,
+          response: `CON Je, mtoto anacheza vizuri tumboni na huna maumivu makali ya tumbo?
+1. Ndio, mtoto anacheza vizuri
+2. Hapana, mtoto hachezi au tumbo linauma sana`,
         };
       }
-
-      // Evaluation at completion
-      if (parts.length >= 5) {
-        const q1 = parts[2]; // "1" = Ndio (Kichwa/Macho)
-        const q2 = parts[3]; // "1" = Damu, "2" = Uvimbe, "3" = Zote, "4" = Hapana
-        const q3 = parts[4]; // "2" = Mtoto hachezi / Tumbo linauma
+      // Results Evaluation
+      if (parts.length === 5) {
+        const q1 = parts[2];
+        const q2 = parts[3];
+        const q3 = parts[4];
 
         const hasHeadache = q1 === "1";
         const hasVision = q1 === "1";
@@ -118,23 +117,24 @@ Tafadhali kaa mahali salama. Wahudumu wa afya watawasiliana nawe sasa hivi. Piga
         const risk = evaluateClinicalRisk({
           hasSevereHeadache: hasHeadache,
           hasBlurredVision: hasVision,
-          hasVaginalBleeding: hasBleeding,
           hasSevereSwelling: hasSwelling,
+          hasVaginalBleeding: hasBleeding,
+          hasHighFever: false,
           hasReducedFetalMovement: hasPainOrReducedMovement,
           hasSevereAbdominalPain: hasPainOrReducedMovement,
         });
 
         let msg = "";
-        if (risk.riskLevel === "CRITICAL_EMERGENCY") {
-          msg = `END [HATARI KUBWA]
-Dalili ulizoripoti zinaonyesha dharura (Kifafa cha Mimba au Kutokwa Damu).
-Kituo chako cha afya kimearifiwa sasa hivi. Elekea kwenye hospitali ya rufaa iliyo karibu mara moja!`;
+        if (risk.flaggedForImmediateReferral || risk.riskLevel === "CRITICAL_EMERGENCY") {
+          msg = `END [DHARURA YA HARAKA]
+Mama, dalili ulizotaja (Kichwa, Macho au Damu) zinahitaji uangalizi wa haraka hospitalini.
+Kliniki yako imearifiwa. Tafadhali nenda kwenye hospitali ya rufaa iliyo karibu mara moja!`;
         } else if (risk.riskLevel === "ELEVATED_RISK") {
-          msg = `END [TAHADHARI]
-Asante kwa kutoa taarifa. Kuna dalili zinazohitaji daktari kutazama. Tafadhali tembelea kituo cha afya kesho asubuhi.`;
+          msg = `END [USHAURI WA KLINIKI]
+Asante kwa kutoa taarifa. Kuna dalili chache zinazofaa kutazamwa na daktari. Tafadhali tembelea kliniki yako kesho asubuhi kwa ukaguzi wa kawaida.`;
         } else {
-          msg = `END [HALI SHWARI]
-Asante Mama. Afya yako na ya mtoto iko salama. Endelea kula vyakula bora na kumeza vidonge vya madini ya chuma.`;
+          msg = `END [HALI YAKO NI SHWARI]
+Hongera Mama! Afya yako na ya mtoto inaendelea vizuri. Kumbuka kumeza vidonge vya madini ya chuma na kunywa maji ya kutosha.`;
         }
 
         return {
@@ -156,25 +156,26 @@ Asante Mama. Afya yako na ya mtoto iko salama. Endelea kula vyakula bora na kume
 
     if (swahiliSubChoice === "2") {
       return {
-        response: `END Dalili Kuu za Hatari:
-- Maumivu makali ya kichwa & kutoona vizuri
-- Kutokwa na damu ukeni
-- Uvimbe wa ghafla mikononi/usoni
-- Mtoto kuacha kucheza
-Ukiona haya, piga dharura mara moja!`,
+        response: `END Dalili za Hatari Wakati wa Mimba:
+• Kichwa kuuma sana & kutoona vizuri
+• Kutokwa na damu au maji ukeni
+• Uvimbe wa ghafla usoni au miguuni
+• Mtoto kuacha kucheza tumboni
+• Homa kali na kutetemeka
+Ukiona dalili hizi, nenda hospitalini mara moja!`,
       };
     }
 
     if (swahiliSubChoice === "3") {
       return {
-        response: `END Tarehe yako ya kliniki ijayo ni: 15/09/2026 katika Kituo cha Afya cha Kangemi.
-Ukipata mabadiliko yoyote, piga *384*99# tena.`,
+        response: `END Tarehe yako ijayo ya kliniki ya wazazi ni: Tarehe 15 mwezi ujao katika Kituo cha Afya cha Kangemi.
+Ukihisi mabadiliko yoyote, piga *384*99# wakati wowote.`,
       };
     }
 
     if (swahiliSubChoice === "4") {
       return {
-        response: `END Piga Namba ya Dharura ya SEQOY: 0800-720-999 au 1199 kwa msaada wa gari la wagonjwa bila malipo.`,
+        response: `END Piga Namba ya Bure ya Dharura ya SEQOY: 0800-720-999 au 1199 kwa usaidizi wa haraka wa gari la wagonjwa.`,
       };
     }
   }
@@ -183,11 +184,11 @@ Ukipata mabadiliko yoyote, piga *384*99# tena.`,
   if (rootChoice === "2") {
     if (parts.length === 1) {
       return {
-        response: `CON SEQOY Maternal Health:
-1. Log Health Check-in
-2. Review Danger Signs
-3. Next ANC Clinic Date
-4. Emergency SOS Help`,
+        response: `CON SEQOY Maternal Care for Mothers:
+1. How Are You Feeling Today? (Check-in)
+2. Warning & Danger Signs
+3. Next Pregnancy Clinic Visit
+4. Call for Emergency Help`,
       };
     }
 
@@ -196,29 +197,28 @@ Ukipata mabadiliko yoyote, piga *384*99# tena.`,
     if (engSubChoice === "1") {
       if (parts.length === 2) {
         return {
-          response: `CON Are you experiencing severe headaches or blurred vision?
-1. Yes
-2. No`,
+          response: `CON Are you experiencing constant severe headache or blurred vision?
+1. Yes (Severe pain / blurred vision)
+2. No (Feeling fine)`,
         };
       }
       if (parts.length === 3) {
         return {
-          response: `CON Are you having sudden severe swelling or vaginal bleeding?
-1. Yes, Bleeding
-2. Yes, Severe Swelling
-3. Both
-4. No`,
+          response: `CON Do you have sudden swelling on face/feet or any vaginal bleeding?
+1. Yes, vaginal bleeding
+2. Yes, severe swelling
+3. Both bleeding and swelling
+4. No, neither`,
         };
       }
       if (parts.length === 4) {
         return {
-          response: `CON Is baby moving normally and are you free of sharp stomach pains?
-1. Baby moving well / No pain
-2. Baby not moving / Severe pain`,
+          response: `CON Is your baby kicking normally and do you feel free from severe stomach pain?
+1. Yes, baby is active & kicking well
+2. No, baby stopped moving or stomach hurts severely`,
         };
       }
-
-      if (parts.length >= 5) {
+      if (parts.length === 5) {
         const q1 = parts[2];
         const q2 = parts[3];
         const q3 = parts[4];
@@ -232,23 +232,24 @@ Ukipata mabadiliko yoyote, piga *384*99# tena.`,
         const risk = evaluateClinicalRisk({
           hasSevereHeadache: hasHeadache,
           hasBlurredVision: hasVision,
-          hasVaginalBleeding: hasBleeding,
           hasSevereSwelling: hasSwelling,
+          hasVaginalBleeding: hasBleeding,
+          hasHighFever: false,
           hasReducedFetalMovement: hasPainOrReducedMovement,
           hasSevereAbdominalPain: hasPainOrReducedMovement,
         });
 
         let msg = "";
-        if (risk.riskLevel === "CRITICAL_EMERGENCY") {
-          msg = `END [CRITICAL RED FLAG]
-Your reported symptoms indicate high risk of Preeclampsia or Hemorrhage.
-Your local clinic has been alerted. Please go to the nearest referral hospital immediately!`;
+        if (risk.flaggedForImmediateReferral || risk.riskLevel === "CRITICAL_EMERGENCY") {
+          msg = `END [URGENT EMERGENCY ALERT]
+Mama, your reported symptoms indicate a potential pregnancy emergency (Preeclampsia or Bleeding).
+Your clinic has been alerted. Please go to the nearest referral hospital immediately!`;
         } else if (risk.riskLevel === "ELEVATED_RISK") {
-          msg = `END [ELEVATED RISK]
-Thank you. Some symptoms need clinical attention. Please visit your primary health clinic tomorrow morning for a BP check.`;
+          msg = `END [CLINIC ADVICE]
+Thank you for your report. Some symptoms require a routine check by your midwife. Please visit your local clinic tomorrow morning.`;
         } else {
-          msg = `END [ALL CLEAR]
-Thank you Mama. Your check-in shows you and your baby are doing well. Continue with your supplements and diet.`;
+          msg = `END [ALL CLEAR & HEALTHY]
+Great news Mama! Your check-in shows you and baby are doing well. Remember to take your daily iron supplements and drink plenty of clean water.`;
         }
 
         return {
@@ -270,29 +271,31 @@ Thank you Mama. Your check-in shows you and your baby are doing well. Continue w
 
     if (engSubChoice === "2") {
       return {
-        response: `END Key Maternal Danger Signs:
-- Severe headache with blurred vision
-- Vaginal bleeding or fluid leakage
-- Sudden face/hand swelling
-- Decreased fetal movements
-Seek immediate medical attention if detected.`,
+        response: `END Key Pregnancy Danger Signs:
+• Severe constant headache & blurred vision
+• Vaginal bleeding or fluid leaking
+• Sudden face/hand/foot swelling
+• Baby stops moving or kicking
+• High fever and chills
+If you experience any of these, visit your hospital immediately!`,
       };
     }
 
     if (engSubChoice === "3") {
       return {
-        response: `END Your next ANC appointment is: Sept 15, 2026 at Kangemi Health Centre.`,
+        response: `END Your next scheduled pregnancy clinic visit is: 15th of next month at Kangemi Health Centre.
+If you feel unwell before then, dial *384*99# anytime.`,
       };
     }
 
     if (engSubChoice === "4") {
       return {
-        response: `END Call SEQOY Emergency Toll-Free: 0800-720-999 or Red Cross 1199 for immediate ambulance dispatch.`,
+        response: `END Call SEQOY Free Emergency Toll-Free: 0800-720-999 or 1199 for free ambulance dispatch assistance.`,
       };
     }
   }
 
   return {
-    response: `END Chaguo si sahihi / Invalid selection. Dial *384*99# to start again.`,
+    response: `END Chaguo si sahihi / Invalid selection. Piga *384*99# kuanza tena.`,
   };
 }

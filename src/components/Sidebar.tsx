@@ -7,6 +7,7 @@ import AppLogo from '@/components/ui/AppLogo';
 import Icon from '@/components/ui/AppIcon';
 import { useTelephony } from '@/context/TelephonyContext';
 import { useAuth, UserRole } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import RoleSwitcher from '@/components/ui/RoleSwitcher';
 
 interface NavItem {
@@ -82,6 +83,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { openDrawer } = useTelephony();
   const { currentUser } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const handleNavClick = (item: NavItem) => {
     if (item.action === 'open_ussd') {
@@ -232,6 +234,25 @@ export default function Sidebar() {
         >
           <Icon name="DevicePhoneMobileIcon" size={16} variant="outline" className="text-primary" />
           {!collapsed && <span className="text-[11px]">Feature Phone Handset</span>}
+        </button>
+
+        {/* Day / Night Mode Toggle */}
+        <button
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium text-secondary-foreground hover:bg-muted hover:text-foreground transition-all duration-150 group"
+          title={`Switch to ${theme === 'dark' ? 'Day Shift (Light)' : 'Night Shift (Dark)'} Mode`}
+        >
+          <Icon
+            name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'}
+            size={16}
+            variant="outline"
+            className={theme === 'dark' ? 'text-amber-400' : 'text-primary'}
+          />
+          {!collapsed && (
+            <span className="text-[11px]">
+              {theme === 'dark' ? 'Day Shift (Light)' : 'Night Shift (Dark)'}
+            </span>
+          )}
         </button>
 
         {/* Collapse toggle */}

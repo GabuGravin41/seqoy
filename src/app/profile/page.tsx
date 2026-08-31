@@ -4,11 +4,13 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
 
 export default function UserProfilePage() {
   const { currentUser, switchRole, personas } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [isOnDuty, setIsOnDuty] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
   const [voiceCallEscalation, setVoiceCallEscalation] = useState(true);
@@ -204,6 +206,62 @@ export default function UserProfilePage() {
                     className="rounded border-border accent-primary w-4 h-4"
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Display & Interface Theme */}
+            <div className="bg-card border border-border rounded-xl p-5 card-glow-primary space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Icon name="SwatchIcon" size={18} variant="outline" className="text-primary" />
+                <h2 className="section-header text-sm">Display & Shift Lighting Mode</h2>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setTheme('light')}
+                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition ${
+                    theme === 'light'
+                      ? 'bg-primary/10 border-primary ring-1 ring-primary'
+                      : 'bg-muted/30 hover:bg-muted border-border'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">☀️</span>
+                    {theme === 'light' && (
+                      <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[9px] font-bold rounded-full">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">Day Shift (Light Mode)</p>
+                    <p className="text-[10px] text-muted-foreground">High contrast for daytime ANC rounds</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTheme('dark')}
+                  className={`p-3.5 rounded-xl border text-left flex flex-col justify-between gap-2 transition ${
+                    theme === 'dark'
+                      ? 'bg-primary/10 border-primary ring-1 ring-primary'
+                      : 'bg-muted/30 hover:bg-muted border-border'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-lg">🌙</span>
+                    {theme === 'dark' && (
+                      <span className="px-1.5 py-0.2 bg-primary text-primary-foreground text-[9px] font-bold rounded-full">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">Night Shift (Dark Mode)</p>
+                    <p className="text-[10px] text-muted-foreground">Deep obsidian for 24h triage screens</p>
+                  </div>
+                </button>
               </div>
             </div>
           </div>

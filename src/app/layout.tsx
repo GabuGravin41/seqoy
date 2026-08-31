@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { DM_Sans } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { TelephonyProvider } from '@/context/TelephonyContext';
 
@@ -31,24 +32,25 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} dark`}>
+    <html lang="en" className={`${dmSans.variable} dark`} suppressHydrationWarning>
       <body className={`${dmSans.className} min-h-screen bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground`}>
-        <AuthProvider>
-          <TelephonyProvider>
-            {children}
-            <Toaster
-              position="bottom-right"
-              theme="dark"
-              toastOptions={{
-                style: {
-                  background: 'var(--card)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--foreground)',
-                },
-              }}
-            />
-          </TelephonyProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <TelephonyProvider>
+              {children}
+              <Toaster
+                position="bottom-right"
+                toastOptions={{
+                  style: {
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--foreground)',
+                  },
+                }}
+              />
+            </TelephonyProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
