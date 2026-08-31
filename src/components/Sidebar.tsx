@@ -8,7 +8,6 @@ import Icon from '@/components/ui/AppIcon';
 import { useTelephony } from '@/context/TelephonyContext';
 import { useAuth, UserRole } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import RoleSwitcher from '@/components/ui/RoleSwitcher';
 
 interface NavItem {
   label: string;
@@ -201,29 +200,27 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Bottom User Persona & Role Switcher */}
-      <div className="border-t border-border p-2.5 space-y-2">
-        {/* Active Role Switcher Card */}
-        {!collapsed && <RoleSwitcher />}
-
-        {/* Collapsed view role badge */}
-        {collapsed && (
+      {/* Bottom User Profile & Facility Badge */}
+      <div className="border-t border-border p-2.5 space-y-1.5">
+        {/* Clinician Card */}
+        <Link
+          href="/profile"
+          className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-muted/40 hover:bg-muted border border-border transition text-left group"
+          title="View Clinical Profile & Credentials"
+        >
           <div
-            className={`w-8 h-8 mx-auto rounded-lg flex items-center justify-center font-bold text-xs border ${currentUser.avatarColor}`}
-            title={`${currentUser.name} (${currentUser.roleTitle})`}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 border ${currentUser.avatarColor}`}
           >
             {currentUser.avatarInitials}
           </div>
-        )}
-
-        {/* My Clinical Profile Link */}
-        <Link
-          href="/profile"
-          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium text-secondary-foreground hover:bg-muted hover:text-foreground transition-all duration-150 group"
-          title="View & Edit Clinical Profile"
-        >
-          <Icon name="UserCircleIcon" size={16} variant="outline" className="text-primary" />
-          {!collapsed && <span className="text-[11px]">My Clinical Profile</span>}
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition">
+                {currentUser.name}
+              </p>
+              <p className="text-[10px] text-muted-foreground truncate">{currentUser.roleTitle}</p>
+            </div>
+          )}
         </Link>
 
         {/* Quick Phone Handset Trigger */}
@@ -240,7 +237,7 @@ export default function Sidebar() {
         <button
           onClick={toggleTheme}
           className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium text-secondary-foreground hover:bg-muted hover:text-foreground transition-all duration-150 group"
-          title={`Switch to ${theme === 'dark' ? 'Day Shift (Light)' : 'Night Shift (Dark)'} Mode`}
+          title={`Switch to ${theme === 'dark' ? 'Day' : 'Night'} Mode`}
         >
           <Icon
             name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'}
@@ -250,7 +247,7 @@ export default function Sidebar() {
           />
           {!collapsed && (
             <span className="text-[11px]">
-              {theme === 'dark' ? 'Day Shift (Light)' : 'Night Shift (Dark)'}
+              {theme === 'dark' ? 'Day Mode' : 'Night Mode'}
             </span>
           )}
         </button>

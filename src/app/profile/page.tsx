@@ -213,7 +213,7 @@ export default function UserProfilePage() {
             <div className="bg-card border border-border rounded-xl p-5 card-glow-primary space-y-4">
               <div className="flex items-center gap-2 border-b border-border pb-3">
                 <Icon name="SwatchIcon" size={18} variant="outline" className="text-primary" />
-                <h2 className="section-header text-sm">Display & Shift Lighting Mode</h2>
+                <h2 className="section-header text-sm">Display Theme</h2>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -235,8 +235,8 @@ export default function UserProfilePage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-foreground">Day Shift (Light Mode)</p>
-                    <p className="text-[10px] text-muted-foreground">High contrast for daytime ANC rounds</p>
+                    <p className="text-xs font-bold text-foreground">Day Mode</p>
+                    <p className="text-[10px] text-muted-foreground">High contrast light background</p>
                   </div>
                 </button>
 
@@ -258,56 +258,65 @@ export default function UserProfilePage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-foreground">Night Shift (Dark Mode)</p>
-                    <p className="text-[10px] text-muted-foreground">Deep obsidian for 24h triage screens</p>
+                    <p className="text-xs font-bold text-foreground">Night Mode</p>
+                    <p className="text-[10px] text-muted-foreground">Deep obsidian dark background</p>
                   </div>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Right Col: Persona & Quick Role Switcher */}
+          {/* Right Col: Facility Context & Clinical Privileges */}
           <div className="space-y-6">
+            {/* Facility Card */}
             <div className="bg-card border border-border rounded-xl p-5 card-glow-primary space-y-4">
               <div className="flex items-center gap-2 border-b border-border pb-3">
-                <Icon name="UsersIcon" size={18} variant="outline" className="text-primary" />
-                <h2 className="section-header text-sm">Switch Active Persona</h2>
+                <Icon name="BuildingOffice2Icon" size={18} variant="outline" className="text-primary" />
+                <h2 className="section-header text-sm">Assigned Health Facility</h2>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Test and experience SEQOY through the eyes of different healthcare cadres across the referral network:
-              </p>
+              <div className="space-y-3">
+                <div className="p-3.5 rounded-xl bg-muted/40 border border-border space-y-1">
+                  <p className="text-xs font-bold text-foreground">{currentUser.facilityName}</p>
+                  <p className="text-[11px] text-muted-foreground">Level 3 / Primary Healthcare Facility · Nairobi County</p>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1 border-b border-border">
+                  <span className="text-muted-foreground">Facility Type</span>
+                  <span className="font-semibold text-foreground">{currentUser.facilityType}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1 border-b border-border">
+                  <span className="text-muted-foreground">Emergency Referral Link</span>
+                  <span className="font-semibold text-primary">Pumwani & Mama Lucy Level 5</span>
+                </div>
+                <div className="flex items-center justify-between text-xs py-1">
+                  <span className="text-muted-foreground">Sub-County Dispatch Zone</span>
+                  <span className="font-semibold text-foreground">Westlands Sub-County</span>
+                </div>
+              </div>
+            </div>
 
+            {/* Clinical Privileges Card */}
+            <div className="bg-card border border-border rounded-xl p-5 card-glow-primary space-y-4">
+              <div className="flex items-center gap-2 border-b border-border pb-3">
+                <Icon name="ShieldCheckIcon" size={18} variant="outline" className="text-primary" />
+                <h2 className="section-header text-sm">Authorized Clinical Privileges</h2>
+              </div>
               <div className="space-y-2">
-                {personas.map((persona) => {
-                  const isCurrent = currentUser.role === persona.role;
-                  return (
-                    <button
-                      key={persona.role}
-                      onClick={() => {
-                        switchRole(persona.role);
-                        toast.success(`Active persona switched to ${persona.name}`);
-                      }}
-                      className={`w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3 ${
-                        isCurrent
-                          ? 'bg-primary/10 border-primary ring-1 ring-primary'
-                          : 'bg-muted/30 hover:bg-muted border-border'
-                      }`}
-                    >
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 border ${persona.avatarColor}`}
-                      >
-                        {persona.avatarInitials}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-foreground truncate">{persona.name}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{persona.roleTitle}</p>
-                      </div>
-                      {isCurrent && (
-                        <Icon name="CheckCircleIcon" size={16} variant="solid" className="text-primary" />
-                      )}
-                    </button>
-                  );
-                })}
+                <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
+                  <span className="text-foreground">Antenatal Patient Registration</span>
+                  <span className="text-emerald-400 font-bold text-[11px]">✓ Authorized</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
+                  <span className="text-foreground">Emergency Ambulance Dispatch</span>
+                  <span className="text-emerald-400 font-bold text-[11px]">✓ Authorized</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
+                  <span className="text-foreground">Referral Hospital Capacity Viewing</span>
+                  <span className="text-emerald-400 font-bold text-[11px]">✓ Authorized</span>
+                </div>
+                <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
+                  <span className="text-foreground">MOH 711 & 105 Reporting Export</span>
+                  <span className="text-emerald-400 font-bold text-[11px]">✓ Authorized</span>
+                </div>
               </div>
             </div>
           </div>
