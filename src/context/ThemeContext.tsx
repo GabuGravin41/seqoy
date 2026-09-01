@@ -13,7 +13,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark');
+  const [theme, setThemeState] = useState<Theme>('light');
 
   const applyTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -21,7 +21,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       const root = document.documentElement;
       root.classList.remove('light', 'dark');
       root.classList.add(newTheme);
-      localStorage.setItem('seqoy_theme', newTheme);
+      try {
+        localStorage.setItem('seqoy_theme', newTheme);
+      } catch (e) {}
     }
   };
 
@@ -36,10 +38,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('seqoy_theme') as Theme;
-      if (saved && (saved === 'light' || saved === 'dark')) {
-        applyTheme(saved);
+      if (saved === 'light' || saved === 'dark') {
+        setThemeState(saved);
       } else {
-        applyTheme('dark');
+        const isDark = document.documentElement.classList.contains('dark');
+        setThemeState(isDark ? 'dark' : 'light');
       }
     }
   }, []);
