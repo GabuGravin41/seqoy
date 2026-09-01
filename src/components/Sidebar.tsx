@@ -56,15 +56,15 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Voice AI Handset', action: 'open_voice', icon: 'PhoneIcon' },
       { label: 'USSD Dialer (*384#)', action: 'open_ussd', icon: 'RadioIcon' },
-      { label: 'MPDSR Surveillance', href: '/emergency-referral-management', icon: 'DocumentChartBarIcon' },
+      { label: 'MPDSR Surveillance', href: '/surveillance', icon: 'DocumentChartBarIcon' },
     ],
   },
   {
     groupLabel: 'Network',
     items: [
-      { label: 'Referral Facilities', href: '/', icon: 'BuildingOfficeIcon' },
-      { label: 'Primary Clinics', href: '/patient-risk-monitoring', icon: 'HomeModernIcon' },
-      { label: 'Expectant Mothers', href: '/patient-risk-monitoring', icon: 'UsersIcon' },
+      { label: 'Referral Facilities', href: '/facilities', icon: 'BuildingOfficeIcon' },
+      { label: 'Primary Clinics', href: '/clinics', icon: 'HomeModernIcon' },
+      { label: 'Expectant Mothers', href: '/mothers', icon: 'UsersIcon' },
       { label: 'HIMS Integrations', href: '/integrations', icon: 'CommandLineIcon' },
     ],
   },

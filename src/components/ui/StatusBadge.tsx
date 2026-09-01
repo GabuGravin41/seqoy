@@ -4,13 +4,27 @@ type TriageLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
 type CapacityStatus = 'AVAILABLE' | 'LIMITED' | 'FULL' | 'OFFLINE';
 type ReferralStatus = 'DISPATCHED' | 'IN_TRANSIT' | 'ARRIVED' | 'COMPLETED' | 'FAILED' | 'DRAFT';
 
-type BadgeVariant = TriageLevel | CapacityStatus | ReferralStatus | 'ACTIVE' | 'INACTIVE' | 'READY' | 'OCCUPIED' | 'MAINTENANCE';
+type BadgeVariant =
+  | TriageLevel
+  | CapacityStatus
+  | ReferralStatus
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'READY'
+  | 'OCCUPIED'
+  | 'MAINTENANCE'
+  | 'NORMAL'
+  | 'ELEVATED_RISK'
+  | 'CRITICAL_EMERGENCY';
 
 const variantMap: Record<BadgeVariant, { bg: string; text: string; dot: string }> = {
   CRITICAL: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
+  CRITICAL_EMERGENCY: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
   HIGH: { bg: 'bg-high/15', text: 'text-high', dot: 'bg-high' },
+  ELEVATED_RISK: { bg: 'bg-high/15', text: 'text-high', dot: 'bg-high' },
   MODERATE: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
   LOW: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
+  NORMAL: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
   AVAILABLE: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
   LIMITED: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
   FULL: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
