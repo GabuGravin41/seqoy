@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -194,12 +195,23 @@ export default function ExpectantMothersPage() {
                       {patient.lastCheckinAt || 'Pending Saturday'}
                     </td>
                     <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setSelectedPatient(patient)}
-                        className="btn-secondary text-xs py-1 px-2.5"
-                      >
-                        View File
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/my-pregnancy/${patient.id}`}
+                          target="_blank"
+                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition flex items-center gap-1"
+                          title="Open Mother Pass (Patient Digital Card)"
+                        >
+                          <span>Mother Pass</span>
+                          <Icon name="ArrowTopRightOnSquareIcon" size={12} variant="outline" />
+                        </Link>
+                        <button
+                          onClick={() => setSelectedPatient(patient)}
+                          className="btn-secondary text-xs py-1 px-2.5"
+                        >
+                          View File
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

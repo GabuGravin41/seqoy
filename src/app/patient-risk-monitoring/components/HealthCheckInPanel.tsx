@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useChat } from '@/lib/hooks/useChat';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/AppIcon';
@@ -93,11 +94,13 @@ export default function HealthCheckInPanel({
   gestationalWeek = 34,
   onRiskScored,
 }: HealthCheckInPanelProps) {
+  const [copilotMode, setCopilotMode] = useState<'transcript' | 'interactive'>('transcript');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [sessionActive, setSessionActive] = useState(false);
   const [riskAssessment, setRiskAssessment] = useState<RiskAssessment | null>(null);
   const [exchangeCount, setExchangeCount] = useState(0);
+  const [transcriptScored, setTranscriptScored] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -141,6 +144,22 @@ export default function HealthCheckInPanel({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  const handleScoreTranscript = () => {
+    setTranscriptScored(true);
+    const assessment: RiskAssessment = {
+      score: 8.4,
+      level: 'CRITICAL',
+      flags: ['Visual Scotoma', 'Persistent Headache', 'Bilateral Edema', 'Reduced Fetal Activity'],
+      recommendation:
+        'Impending Eclampsia danger signs detected. Administer Magnesium Sulfate loading dose (4g IV). Immediate emergency referral to Level 5 facility (Pumwani Maternity) recommended.',
+    };
+    setRiskAssessment(assessment);
+    onRiskScored?.(assessment);
+    toast.error('Critical Preeclampsia Risk Identified!', {
+      description: 'Transfer recommendation generated for Pumwani Maternity Hospital.',
+    });
+  };
+
   const startSession = () => {
     setSessionActive(true);
     setMessages([]);
@@ -179,16 +198,12 @@ export default function HealthCheckInPanel({
     const apiMessages = [
       {
         role: 'system',
-        content: `${SYSTEM_PROMPT}\n\nPatient name: ${patientName}.${gestInfo}${
-          exchangeCount >= 3
-            ? ' You have gathered enough information. After your next response, include the RISK_ASSESSMENT_JSON.'
-            : ''
-        }`,
+        content: `${SYSTEM_PROMPT}\n\nPatient: ${patientName}.${gestInfo}\nExchanges so far: ${exchangeCount + 1}.`,
       },
       ...newMessages.map((m) => ({ role: m.role, content: m.content })),
     ];
 
-    sendMessage(apiMessages, { temperature: 0.7, max_tokens: 600 });
+    sendMessage(apiMessages, { temperature: 0.7, max_tokens: 500 });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -204,39 +219,48 @@ export default function HealthCheckInPanel({
     setRiskAssessment(null);
     setExchangeCount(0);
     setInput('');
+    setTranscriptScored(false);
   };
 
   return (
-    <div className="bg-card border border-border rounded-xl card-glow-primary flex flex-col h-full min-h-[500px]">
-      {/* Header */}
-      <div className="p-5 border-b border-border flex items-center justify-between">
+    <div className="bg-card border border-border rounded-xl card-glow-primary flex flex-col h-full min-h-[520px]">
+      {/* Clinician Header */}
+      <div className="p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary/15 flex items-center justify-center">
-            <Icon name="ChatBubbleLeftRightIcon" size={16} variant="outline" className="text-primary" />
+          <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center text-primary">
+            <Icon name="ChatBubbleLeftRightIcon" size={18} variant="outline" />
           </div>
           <div>
-            <h2 className="section-header text-base">Conversational Voice & AI Health Check-In</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="section-header text-sm">Clinical Intake & Telephony Triage Copilot</h2>
+              <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                Staff Decision Support
+              </span>
+            </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Live Claude / SEQOY Clinical Engine · Preeclampsia &amp; PPH Screening
+              Synthesizing weekly Saturday voice check-ins &amp; in-person consultations for {patientName} (Week {gestationalWeek})
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {sessionActive && (
-            <span className="flex items-center gap-1.5 text-xs text-primary font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              Active Screening
-            </span>
-          )}
-          {sessionActive && (
-            <button
-              onClick={resetSession}
-              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              title="End session"
-            >
-              <Icon name="XMarkIcon" size={14} variant="outline" />
-            </button>
-          )}
+
+        {/* Copilot Mode Switcher */}
+        <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border">
+          <button
+            onClick={() => setCopilotMode('transcript')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              copilotMode === 'transcript' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            🎙️ Saturday Voice Call
+          </button>
+          <button
+            onClick={() => setCopilotMode('interactive')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              copilotMode === 'interactive' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            🩺 In-Clinic Triage
+          </button>
         </div>
       </div>
 
@@ -286,65 +310,188 @@ export default function HealthCheckInPanel({
         </div>
       )}
 
-      {/* Messages Box */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-thin">
-        {!sessionActive && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Icon name="HeartIcon" size={24} variant="outline" className="text-primary" />
+      {/* Mode 1: Saturday Voice AI Call Transcript Review */}
+      {copilotMode === 'transcript' && (
+        <div className="flex-1 overflow-y-auto p-5 space-y-4 scrollbar-thin">
+          {/* Call Metadata Card */}
+          <div className="p-4 rounded-xl bg-muted/40 border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                <Icon name="PhoneArrowUpRightIcon" size={20} variant="outline" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-foreground">Weekly Automated Voice Call</span>
+                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    CALL COMPLETED
+                  </span>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Saturday 14:02 EAT · Duration: 2m 14s · Outbound Telephony Channel: Twilio GSM Kenya · Audio: Swahili
+                </p>
+              </div>
             </div>
-            <div className="text-center max-w-xs">
-              <p className="text-sm font-semibold text-foreground mb-1">Maternal Health Screening</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Start a conversational AI screening session to assess preeclampsia and PPH risk in real time with automated clinical scoring.
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => toast.info('Playing simulated audio recording for Mama Amina (Swahili)...')}
+                className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5"
+              >
+                <Icon name="PlayIcon" size={14} variant="solid" className="text-primary" />
+                <span>Play Audio (2:14)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Transcript Dialogue */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold text-foreground">Speech-to-Text Clinical Transcript (Verified):</p>
+            
+            <div className="p-3 rounded-xl bg-secondary/40 border border-border space-y-1 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-primary">🤖 SEQOY Outbound Voice AI (0:04)</span>
+                <span className="text-muted-foreground">Swahili (Sanifu)</span>
+              </div>
+              <p className="text-foreground leading-relaxed">
+                &ldquo;Habari Mama Amina! Jina langu ni Daktari AI kutoka SEQOY. Tunafanya ukaguzi wa afya ya kila wiki. Je, una maumivu yoyote ya kichwa, macho kuona giza, au uvimbe wa miguu tangu juzi?&rdquo;
+              </p>
+              <p className="text-[10px] text-muted-foreground italic">
+                (Translation: Hello Mama Amina! I am Daktari AI from SEQOY doing your weekly health check. Have you had any headaches, blurred vision, or swelling?)
               </p>
             </div>
-            <button
-              onClick={startSession}
-              className="btn-primary text-xs px-6 py-2.5 mt-2"
-            >
-              <Icon name="PlayIcon" size={14} variant="solid" />
-              Start Interactive Check-In
-            </button>
-          </div>
-        )}
 
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-          >
-            {msg.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Icon name="CpuChipIcon" size={13} variant="solid" className="text-primary" />
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-rose-400">👤 Amina Wanjiku (Mother, 0:28)</span>
+                <span className="text-rose-400 font-semibold text-[10px]">⚠️ DANGER PHRASES DETECTED</span>
               </div>
-            )}
-            <div
-              className={`max-w-[80%] px-3.5 py-2.5 rounded-xl text-xs leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-primary text-primary-foreground rounded-tr-sm font-medium'
-                  : 'bg-muted text-foreground rounded-tl-sm'
-              }`}
-            >
-              {msg.content === '…' ? (
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
-                </span>
+              <p className="text-foreground leading-relaxed">
+                &ldquo;Ndio daktari, nina maumivu makali sana ya kichwa tangu juzi ambayo hayaishi hata nikinywa panadol. Pia naona ukungu na madoa machoni, na miguu na mikono imevimba sana kiasi kwamba siwezi kuvaa viatu.&rdquo;
+              </p>
+              <p className="text-[10px] text-muted-foreground italic">
+                (Translation: Yes doctor, I have very severe persistent headaches since two days ago. I see blurriness and dark spots in my eyes, and my feet and hands are swollen so much that I cannot wear shoes.)
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-secondary/40 border border-border space-y-1 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-primary">🤖 SEQOY Outbound Voice AI (1:12)</span>
+                <span className="text-muted-foreground">Swahili (Sanifu)</span>
+              </div>
+              <p className="text-foreground leading-relaxed">
+                &ldquo;Pole sana Mama Amina. Je, mtoto wako anacheza na kutikisika kama kawaida leo, au unahisi maumivu makali chini ya mbavu?&rdquo;
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 space-y-1 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-bold text-rose-400">👤 Amina Wanjiku (Mother, 1:35)</span>
+                <span className="text-rose-400 font-semibold text-[10px]">⚠️ EPIGASTRIC PAIN + REDUCED FETAL KICKS</span>
+              </div>
+              <p className="text-foreground leading-relaxed">
+                &ldquo;Tumbo linanichoma upande wa juu chini ya mbavu, na mtoto hajacheza vizuri tangu asubuhi.&rdquo;
+              </p>
+              <p className="text-[10px] text-muted-foreground italic">
+                (Translation: I have severe burning pain under my ribs, and the baby has not kicked properly since morning.)
+              </p>
+            </div>
+          </div>
+
+          {/* Action Bar for Midwife */}
+          <div className="p-4 rounded-xl bg-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4">
+            <div>
+              <p className="text-xs font-bold text-foreground">Clinical Synthesis Status</p>
+              <p className="text-[11px] text-muted-foreground">
+                {transcriptScored
+                  ? 'Calculated: Score 8.4/10 (CRITICAL) · Referral protocol active'
+                  : 'Click below to synthesize danger score and evaluate hospital bed matching'}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {!transcriptScored ? (
+                <button
+                  onClick={handleScoreTranscript}
+                  className="btn-primary text-xs py-2 px-4 flex items-center gap-2"
+                >
+                  <Icon name="ShieldExclamationIcon" size={16} variant="solid" />
+                  <span>Run Clinical AI Risk Synthesis</span>
+                </button>
               ) : (
-                msg.content
+                <Link
+                  href="/emergency-referral-management"
+                  className="btn-primary bg-rose-600 hover:bg-rose-700 text-white text-xs py-2 px-4 flex items-center gap-2 shadow-lg"
+                >
+                  <Icon name="TruckIcon" size={16} variant="solid" />
+                  <span>Initiate Emergency Transfer (Pumwani) →</span>
+                </Link>
               )}
             </div>
-            {msg.role === 'user' && (
-              <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Icon name="UserIcon" size={13} variant="solid" className="text-secondary-foreground" />
-              </div>
-            )}
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+        </div>
+      )}
+
+      {/* Mode 2: Interactive In-Clinic Triage Screening */}
+      {copilotMode === 'interactive' && (
+        <div className="flex-1 overflow-y-auto p-5 space-y-3 scrollbar-thin">
+          {!sessionActive && messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full gap-4 py-8">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Icon name="HeartIcon" size={24} variant="outline" className="text-primary" />
+              </div>
+              <div className="text-center max-w-xs">
+                <p className="text-sm font-semibold text-foreground mb-1">In-Clinic Consultation Intake</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Conduct an interactive clinical screening session for {patientName}. Claude evaluates symptoms against WHO Antenatal Care (DAK) protocols.
+                </p>
+              </div>
+              <button
+                onClick={startSession}
+                className="btn-primary text-xs px-6 py-2.5 mt-2"
+              >
+                <Icon name="PlayIcon" size={14} variant="solid" />
+                Start In-Person Triage Session
+              </button>
+            </div>
+          )}
+
+          {messages.map((msg, idx) => (
+            <div
+              key={idx}
+              className={`flex gap-2.5 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+            >
+              {msg.role === 'assistant' && (
+                <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon name="CpuChipIcon" size={13} variant="solid" className="text-primary" />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] px-3.5 py-2.5 rounded-xl text-xs leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-primary text-primary-foreground rounded-tr-sm font-medium'
+                    : 'bg-muted text-foreground rounded-tl-sm'
+                }`}
+              >
+                {msg.content === '…' ? (
+                  <span className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                ) : (
+                  msg.content
+                )}
+              </div>
+              {msg.role === 'user' && (
+                <div className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon name="UserIcon" size={13} variant="solid" className="text-secondary-foreground" />
+                </div>
+              )}
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
 
       {/* Input Form */}
       {sessionActive && (

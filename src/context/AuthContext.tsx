@@ -22,6 +22,8 @@ export interface UserPersona {
   avatarInitials: string;
   avatarColor: string;
   description: string;
+  primaryRoute: string;
+  allowedRoutes: string[];
   permissions: {
     canEnrolPatients: boolean;
     canViewAllPatients: boolean;
@@ -48,6 +50,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'NK',
     avatarColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     description: 'Enrols expectant mothers, monitors danger scores, and dispatches emergency transfers to Level 5/6 hospitals without referral blindness.',
+    primaryRoute: '/patient-risk-monitoring',
+    allowedRoutes: ['/patient-risk-monitoring', '/mothers', '/emergency-referral-management', '/capacity', '/profile', '/simulator'],
     permissions: {
       canEnrolPatients: true,
       canViewAllPatients: true,
@@ -72,6 +76,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'SG',
     avatarColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     description: 'Manages live ICU/HDU bed capacity, operating theatre readiness, and prepares surgical teams for incoming emergency ambulances.',
+    primaryRoute: '/capacity',
+    allowedRoutes: ['/capacity', '/emergency-referral-management', '/facilities', '/profile'],
     permissions: {
       canEnrolPatients: false,
       canViewAllPatients: false,
@@ -96,6 +102,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'TO',
     avatarColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
     description: 'Maintains real-time unit counts across ABO/Rh groups and triggers shortage broadcasts for emergency PPH cases.',
+    primaryRoute: '/capacity',
+    allowedRoutes: ['/capacity', '/facilities', '/profile'],
     permissions: {
       canEnrolPatients: false,
       canViewAllPatients: false,
@@ -120,6 +128,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'PM',
     avatarColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     description: 'Receives instant dispatch routing, transmits in-transit vital signs, and updates live ETA to receiving hospital triage teams.',
+    primaryRoute: '/emergency-referral-management',
+    allowedRoutes: ['/emergency-referral-management', '/facilities', '/profile'],
     permissions: {
       canEnrolPatients: false,
       canViewAllPatients: false,
@@ -144,6 +154,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'DO',
     avatarColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     description: 'Monitors county-wide 3-Delays surveillance, reviews hospital bottleneck heatmaps, and tracks maternal mortality reduction metrics for MoH.',
+    primaryRoute: '/surveillance',
+    allowedRoutes: ['/surveillance', '/facilities', '/clinics', '/capacity', '/emergency-referral-management', '/profile'],
     permissions: {
       canEnrolPatients: false,
       canViewAllPatients: true,
@@ -168,6 +180,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'MZ',
     avatarColor: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
     description: 'Conducts household follow-ups on silent/unreachable mothers (48h+), assists with USSD check-ins, and promotes clinic attendance.',
+    primaryRoute: '/mothers',
+    allowedRoutes: ['/mothers', '/profile', '/simulator'],
     permissions: {
       canEnrolPatients: true,
       canViewAllPatients: false,
@@ -192,6 +206,8 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
     avatarInitials: 'AM',
     avatarColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
     description: 'Unrestricted master access: registers health facilities, manages telecom shortcodes (*384#), and provisions system users.',
+    primaryRoute: '/facilities',
+    allowedRoutes: ['/capacity', '/patient-risk-monitoring', '/emergency-referral-management', '/surveillance', '/facilities', '/clinics', '/mothers', '/integrations', '/simulator', '/profile'],
     permissions: {
       canEnrolPatients: true,
       canViewAllPatients: true,
@@ -207,6 +223,10 @@ export const USER_PERSONAS: Record<UserRole, UserPersona> = {
   },
 };
 
+export function getDefaultRouteForRole(role: UserRole): string {
+  return USER_PERSONAS[role]?.primaryRoute || '/';
+}
+
 interface AuthContextType {
   currentUser: UserPersona;
   isAuthenticated: boolean;
@@ -215,6 +235,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<boolean>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
+  canAccessRoute: (pathname: string) => boolean;
   personas: UserPersona[];
 }
 
@@ -289,6 +310,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const currentUser = USER_PERSONAS[currentRole] || USER_PERSONAS.CLINIC_NURSE;
   const personas = Object.values(USER_PERSONAS);
 
+  const canAccessRoute = (pathname: string): boolean => {
+    const allowed = currentUser.allowedRoutes;
+    if (!allowed || allowed.length === 0) return true;
+    return allowed.some((route) => {
+      if (route === '/') return pathname === '/';
+      return pathname.startsWith(route);
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -299,6 +329,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         forgotPassword,
         logout,
         switchRole,
+        canAccessRoute,
         personas,
       }}
     >

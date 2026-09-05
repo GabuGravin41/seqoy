@@ -30,10 +30,11 @@ const navGroups: NavGroup[] = [
     items: [
       {
         label: 'Hospital Capacity',
-        href: '/',
+        href: '/capacity',
         icon: 'BuildingOffice2Icon',
         badge: 2,
         badgeVariant: 'critical',
+        roles: ['BED_MANAGER', 'BLOOD_BANK_OFFICER', 'CLINIC_NURSE', 'COUNTY_DIRECTOR', 'SYSTEM_ADMIN'],
       },
       {
         label: 'Patient Monitoring',
@@ -41,6 +42,7 @@ const navGroups: NavGroup[] = [
         icon: 'HeartIcon',
         badge: 5,
         badgeVariant: 'critical',
+        roles: ['CLINIC_NURSE', 'SYSTEM_ADMIN'],
       },
       {
         label: 'Emergency Referrals',
@@ -48,24 +50,66 @@ const navGroups: NavGroup[] = [
         icon: 'TruckIcon',
         badge: 3,
         badgeVariant: 'warning',
+        roles: ['CLINIC_NURSE', 'BED_MANAGER', 'AMBULANCE_PARAMEDIC', 'COUNTY_DIRECTOR', 'SYSTEM_ADMIN'],
+      },
+      {
+        label: 'Community Mothers',
+        href: '/mothers',
+        icon: 'UsersIcon',
+        roles: ['COMMUNITY_PROMOTER', 'CLINIC_NURSE', 'SYSTEM_ADMIN'],
       },
     ],
   },
   {
-    groupLabel: 'Intelligence',
+    groupLabel: 'Intelligence & Telephony',
     items: [
-      { label: 'Voice AI Handset', action: 'open_voice', icon: 'PhoneIcon' },
-      { label: 'USSD Dialer (*384#)', action: 'open_ussd', icon: 'RadioIcon' },
-      { label: 'MPDSR Surveillance', href: '/surveillance', icon: 'DocumentChartBarIcon' },
+      {
+        label: 'Voice AI Handset',
+        action: 'open_voice',
+        icon: 'PhoneIcon',
+        roles: ['CLINIC_NURSE', 'COMMUNITY_PROMOTER', 'SYSTEM_ADMIN'],
+      },
+      {
+        label: 'USSD Dialer (*384#)',
+        action: 'open_ussd',
+        icon: 'RadioIcon',
+        roles: ['CLINIC_NURSE', 'COMMUNITY_PROMOTER', 'SYSTEM_ADMIN'],
+      },
+      {
+        label: 'MPDSR Surveillance',
+        href: '/surveillance',
+        icon: 'DocumentChartBarIcon',
+        roles: ['COUNTY_DIRECTOR', 'BED_MANAGER', 'SYSTEM_ADMIN'],
+      },
     ],
   },
   {
-    groupLabel: 'Network',
+    groupLabel: 'Network & System',
     items: [
-      { label: 'Referral Facilities', href: '/facilities', icon: 'BuildingOfficeIcon' },
-      { label: 'Primary Clinics', href: '/clinics', icon: 'HomeModernIcon' },
-      { label: 'Expectant Mothers', href: '/mothers', icon: 'UsersIcon' },
-      { label: 'HIMS Integrations', href: '/integrations', icon: 'CommandLineIcon' },
+      {
+        label: 'Referral Facilities',
+        href: '/facilities',
+        icon: 'BuildingOfficeIcon',
+        roles: ['BED_MANAGER', 'BLOOD_BANK_OFFICER', 'COUNTY_DIRECTOR', 'AMBULANCE_PARAMEDIC', 'SYSTEM_ADMIN'],
+      },
+      {
+        label: 'Primary Clinics',
+        href: '/clinics',
+        icon: 'HomeModernIcon',
+        roles: ['COUNTY_DIRECTOR', 'SYSTEM_ADMIN'],
+      },
+      {
+        label: 'Mother Pass Preview',
+        href: '/my-pregnancy/1',
+        icon: 'DevicePhoneMobileIcon',
+        roles: ['CLINIC_NURSE', 'COMMUNITY_PROMOTER', 'SYSTEM_ADMIN'],
+      },
+      {
+        label: 'HIMS Integrations',
+        href: '/integrations',
+        icon: 'CommandLineIcon',
+        roles: ['SYSTEM_ADMIN'],
+      },
     ],
   },
 ];
@@ -83,6 +127,14 @@ export default function Sidebar() {
   const { openDrawer } = useTelephony();
   const { currentUser } = useAuth();
   const { theme, toggleTheme } = useTheme();
+
+  // Filter groups according to current role permissions
+  const filteredGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || item.roles.includes(currentUser.role)),
+    }))
+    .filter((group) => group.items.length > 0);
 
   const handleNavClick = (item: NavItem) => {
     if (item.action === 'open_ussd') {
@@ -114,7 +166,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2">
-        {navGroups.map((group) => (
+        {filteredGroups.map((group) => (
           <div key={`group-${group.groupLabel}`} className="mb-4">
             {!collapsed && (
               <p className="stat-label px-2 mb-1 text-[10px]">{group.groupLabel}</p>
