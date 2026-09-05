@@ -1,549 +1,343 @@
-'use client';
+﻿'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import AppLogo from '@/components/ui/AppLogo';
-import Icon from '@/components/ui/AppIcon';
-import { useTelephony } from '@/context/TelephonyContext';
-import { USER_PERSONAS } from '@/context/AuthContext';
 
-export default function SEQOYLandingPage() {
-  const { openDrawer } = useTelephony();
-  const [selectedPersonaKey, setSelectedPersonaKey] = useState<string>('CLINIC_NURSE');
-  const [activeFaq, setActiveFaq] = useState<number | null>(null);
+const delays = [
+  {
+    n: '01',
+    bg: 'bg-lilac/70',
+    chip: 'text-brand',
+    title: 'The Decision to Seek Care',
+    body: 'Early danger signs — puffy face, severe headache, spot bleeding — are dismissed until seizures or shock begin. SEQOY reaches mothers first: weekly Swahili Voice AI calls and offline USSD *384*99# — no smartphone or data needed.',
+  },
+  {
+    n: '02',
+    bg: 'bg-mint/70',
+    chip: 'text-emerald-soft',
+    title: 'Reaching the Facility',
+    body: 'Ambulances no longer drive blind. One match finds the nearest facility with a verified-open theatre, an ICU bed, and 2 units of compatible blood — with live GPS routing and ETA.',
+  },
+  {
+    n: '03',
+    bg: 'bg-peach/70',
+    chip: 'text-rose-soft',
+    title: 'Receiving Quality Care',
+    body: 'The hospital is alerted 20–30 minutes out. The team is scrubbed, blood is cross-matched, and the ICU bed is locked in before wheels touch the ground.',
+  },
+];
 
-  const toggleFaq = (index: number) => {
-    setActiveFaq(activeFaq === index ? null : index);
-  };
+const cadres = [
+  {
+    title: 'Clinic Midwives',
+    body: 'Triage walking-in mothers, compute 0–10 danger scores, and initiate immediate referral handovers.',
+    href: '/patient-risk-monitoring',
+  },
+  {
+    title: 'Bed & Theatre Managers',
+    body: 'Receive pre-arrival telemetry — ETA, vitals, blood units — and lock beds before the ambulance arrives.',
+    href: '/capacity',
+  },
+  {
+    title: 'Ambulance Medics',
+    body: 'Live GPS routing to the confirmed capable facility, with in-transit vitals logging en route.',
+    href: '/emergency-referral-management',
+  },
+  {
+    title: 'Blood Bank Officers',
+    body: 'Region-wide O-negative and critical-stock visibility to prevent blind transfusion shortages.',
+    href: '/capacity',
+  },
+  {
+    title: 'County Directors',
+    body: 'Automated MoH 711 & 105 maternal mortality audits and bottleneck heatmaps.',
+    href: '/surveillance',
+  },
+];
 
-  const selectedPersona = USER_PERSONAS[selectedPersonaKey as keyof typeof USER_PERSONAS];
+const trustStats = [
+  { value: '100%', label: 'Free offline access for mothers', bg: 'bg-lilac/70', color: 'text-brand' },
+  { value: '0', label: 'New systems to type into', bg: 'bg-mint/70', color: 'text-emerald-soft' },
+  { value: '60', label: 'Min pre-arrival alert window', bg: 'bg-butter/70', color: 'text-amber-soft' },
+  { value: '3', label: 'Delays eliminated end-to-end', bg: 'bg-blush/70', color: 'text-rose-soft' },
+];
 
+export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500 selection:text-slate-950">
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 1. TOP GLOBAL NAVIGATION HEADER */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 lg:px-8 py-3.5 transition">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Brand Logo */}
+    <div className="min-h-screen font-sans text-ink antialiased bg-canvas selection:bg-brand selection:text-white">
+      <div className="relative isolate overflow-hidden">
+        {/* Ambient pastel orbs */}
+        <div className="absolute -top-24 -left-24 size-[460px] rounded-full bg-brand/25 blur-3xl animate-floaty pointer-events-none" aria-hidden />
+        <div className="absolute top-40 -right-28 size-[420px] rounded-full bg-blush/40 blur-3xl animate-floaty-2 pointer-events-none" aria-hidden />
+        <div className="absolute bottom-0 left-1/3 size-[380px] rounded-full bg-mint/50 blur-3xl pointer-events-none" aria-hidden />
+
+        {/* ─── Header ─── */}
+        <header className="relative z-10 mx-auto flex max-w-6xl items-center justify-between px-6 pt-6">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-teal-500/15 border border-teal-500/30 flex items-center justify-center text-teal-400 group-hover:bg-teal-500/25 transition shadow-xs">
-              <AppLogo size={24} />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-base text-white tracking-tight">SEQOY</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 font-bold">
-                  Kenya 🏥
-                </span>
-              </div>
-              <span className="text-[10px] text-slate-400 tracking-wide font-medium">
-                Maternal Emergency &amp; Referral Network
-              </span>
-            </div>
+            <span className="grid size-10 place-items-center rounded-2xl border border-white/80 bg-white/70 shadow-xs backdrop-blur-md transition group-hover:bg-white">
+              <span className="font-display text-lg font-bold text-brand">S</span>
+            </span>
+            <span>
+              <span className="block text-base font-bold leading-none tracking-tight text-ink">SEQOY</span>
+              <span className="block text-[11px] text-ink-soft">Maternal Emergency Network</span>
+            </span>
           </Link>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-slate-300">
-            <a href="#why-seqoy" className="hover:text-teal-400 transition">The Crisis (Why)</a>
-            <a href="#how-it-works" className="hover:text-teal-400 transition">How It Works</a>
-            <a href="#roles" className="hover:text-teal-400 transition">Clinical Cadres</a>
-            <a href="#trust" className="hover:text-teal-400 transition">Data &amp; Security</a>
-            <a href="#faq" className="hover:text-teal-400 transition">FAQ</a>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-ink-soft md:flex">
+            <a href="#problem" className="transition hover:text-ink">Problem</a>
+            <a href="#cadres" className="transition hover:text-ink">Who Uses It</a>
+            <a href="#trust" className="transition hover:text-ink">Trust</a>
+            <a href="#cta" className="transition hover:text-ink">Contact</a>
           </nav>
-
-          {/* Right Action CTAs */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => openDrawer('ussd')}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700 transition"
-              title="Test 2G USSD Dialing (*384#)"
-            >
-              <Icon name="RadioIcon" size={14} variant="outline" className="text-teal-400" />
-              <span>USSD *384#</span>
-            </button>
-
-            <Link
-              href="/my-pregnancy/1"
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 text-xs font-semibold border border-teal-500/30 transition"
-            >
-              <span>🌸 Mother Pass</span>
-            </Link>
-
+          <div className="flex items-center gap-3">
             <Link
               href="/capacity"
-              className="px-4 py-2 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold shadow-lg shadow-teal-500/20 transition flex items-center gap-1.5 active:scale-95"
+              className="hidden rounded-full border border-white/80 bg-white/60 px-4 py-2.5 text-sm font-semibold text-ink backdrop-blur-md transition hover:bg-white sm:block"
             >
-              <span>Launch Clinical Portal</span>
-              <Icon name="ArrowRightIcon" size={14} variant="outline" />
+              Explore Clinical Portal
             </Link>
-          </div>
-        </div>
-      </header>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 2. HERO SECTION */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-28 border-b border-slate-800/60">
-        {/* Background Subtle Gradient Glow */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[350px] bg-teal-500/10 blur-[130px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 right-1/4 w-[400px] h-[300px] bg-rose-500/5 blur-[120px] rounded-full pointer-events-none" />
-
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
-          {/* Institutional Compliance Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/80 shadow-sm text-xs font-medium">
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
-            <span className="text-slate-300">Aligned with WHO Antenatal Protocols &amp; Kenya MOH 711 Standards</span>
-          </div>
-
-          {/* Main Hero Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-white max-w-4xl mx-auto leading-[1.15]">
-            Eliminating Maternal <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 via-emerald-300 to-cyan-400">Referral Blindness</span> Across Kenya.
-          </h1>
-
-          {/* Hero Subtitle */}
-          <p className="text-sm sm:text-base lg:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
-            In obstetric emergencies, referral delays cost lives. SEQOY connects primary maternity clinics, emergency ambulances, and tertiary hospitals in real time—pairing proactive 2G AI danger screening with live ICU bed and blood availability.
-          </p>
-
-          {/* Primary Action Button Cluster */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
-            <Link
-              href="/capacity"
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 text-sm font-bold shadow-xl shadow-teal-500/25 transition flex items-center justify-center gap-2"
+            <a
+              href="#cta"
+              className="rounded-full bg-ink px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-ink/10 transition hover:bg-ink/85"
             >
-              <Icon name="BuildingOffice2Icon" size={18} variant="solid" />
-              <span>Enter Clinical Network</span>
-            </Link>
-
-            <Link
-              href="/my-pregnancy/1"
-              className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-sm font-semibold transition flex items-center justify-center gap-2"
-            >
-              <span>🌸 Preview Mother Pass</span>
-            </Link>
+              Schedule Briefing
+            </a>
           </div>
+        </header>
 
-          {/* High-Impact Stat Strip */}
-          <div className="pt-10 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xs">
-              <span className="text-2xl sm:text-3xl font-black text-teal-400">73%</span>
-              <p className="text-xs font-bold text-white mt-1">Preventable Complications</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Targeting eclampsia, PPH, and obstructed labor.</p>
+        {/* ─── Hero ─── */}
+        <section className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-6 pt-14 pb-16 md:pt-20 lg:grid-cols-12">
+          <div className="lg:col-span-6">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/60 px-3 py-1.5 text-xs font-semibold text-ink-soft backdrop-blur-md">
+              <span className="size-2 animate-pulse rounded-full bg-emerald-soft" />
+              Network LIVE · 47 facilities connected
             </div>
-
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xs">
-              <span className="text-2xl sm:text-3xl font-black text-emerald-400">&lt; 4 mins</span>
-              <p className="text-xs font-bold text-white mt-1">Emergency Hospital Match</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Down from 140 min manual telephone delays.</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xs">
-              <span className="text-2xl sm:text-3xl font-black text-cyan-400">100% Reach</span>
-              <p className="text-xs font-bold text-white mt-1">2G Feature Phone Support</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Zero-data USSD `*384#` &amp; automated Swahili calls.</p>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xs">
-              <span className="text-2xl sm:text-3xl font-black text-rose-400">Zero Blindness</span>
-              <p className="text-xs font-bold text-white mt-1">Verified Capacity Transfer</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">No referrals to occupied theatres or dry blood banks.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 3. THE PROBLEM & WHY: WHO THREE DELAYS CRISIS */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section id="why-seqoy" className="py-20 border-b border-slate-800/60 bg-slate-900/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-rose-400">
-              The Reality in Sub-Saharan Africa
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Why Mothers Die: The Anatomy of Referral Failure
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Maternal mortality is not just a clinical failure—it is a coordination failure across the three stages of maternal care seeking.
+            <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.02] tracking-tight text-balance md:text-[3.4rem]">
+              The Zero-Blindness Maternal Emergency Referral &amp; Hospital Capacity Network.
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-soft">
+              When a mother develops an obstetric emergency — eclampsia, hemorrhage, obstructed labor — rural clinics no
+              longer guess. SEQOY matches her to a verified open surgical theatre, an empty ICU bed, and matching blood —
+              before the ambulance leaves.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Delay 1 */}
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 hover:border-slate-700 transition">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 flex items-center justify-center font-bold text-lg">
-                1
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-rose-400 uppercase tracking-wide">Delay 1: Recognition</span>
-                <h3 className="text-base font-bold text-white">Delayed Decision to Seek Care</h3>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Mothers and families mistake early danger signs (visual scotoma, refractory headaches, facial edema) for normal pregnancy discomfort. By the time eclamptic convulsions start, irreversible brain or organ damage has occurred.
-              </p>
-              <div className="p-3 rounded-xl bg-teal-950/40 border border-teal-500/20 text-[11px] text-teal-200">
-                <strong>SEQOY Solution:</strong> Weekly automated Saturday voice calls in Swahili and USSD `*384#` proactively catch symptoms days before critical convulsions begin.
-              </div>
-            </div>
-
-            {/* Delay 2 */}
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 hover:border-slate-700 transition">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold text-lg">
-                2
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wide">Delay 2: Reaching Care</span>
-                <h3 className="text-base font-bold text-white">Transport &amp; Geographic Delays</h3>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Rural clinics struggle with phone dispatches, lack coordination with county emergency fleets, and patients get stuck in city traffic or bad roads without medical escorts or vital monitoring in transit.
-              </p>
-              <div className="p-3 rounded-xl bg-teal-950/40 border border-teal-500/20 text-[11px] text-teal-200">
-                <strong>SEQOY Solution:</strong> 1-Click emergency ambulance transfer with real-time transit telemetry and live pre-arrival vitals streaming to the receiving hospital ICU.
-              </div>
-            </div>
-
-            {/* Delay 3 */}
-            <div className="p-6 rounded-3xl bg-slate-900 border border-slate-800 space-y-4 hover:border-slate-700 transition">
-              <div className="w-12 h-12 rounded-2xl bg-purple-500/15 text-purple-400 flex items-center justify-center font-bold text-lg">
-                3
-              </div>
-              <div className="space-y-1">
-                <span className="text-xs font-semibold text-purple-400 uppercase tracking-wide">Delay 3: Referral Blindness</span>
-                <h3 className="text-base font-bold text-white">Arriving at an Unprepared Facility</h3>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                A clinic sends a bleeding or seizing mother in an ambulance to a Level 5 hospital. Upon arrival, the theatre is occupied, the adult ICU is full, or there is no blood O-negative. The patient dies waiting for a second transfer.
-              </p>
-              <div className="p-3 rounded-xl bg-teal-950/40 border border-teal-500/20 text-[11px] text-teal-200">
-                <strong>SEQOY Solution:</strong> Real-time anti-referral blindness grid verifying bed availability, theatre readiness, and blood units BEFORE wheels start turning.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 4. HOW IT WORKS: THE GOLDEN THREAD WORKFLOW */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section id="how-it-works" className="py-20 border-b border-slate-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal-400">
-              The Architecture of Survival
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              How SEQOY Coordinates the Care Continuum
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              From the rural village to the tertiary surgical theatre, SEQOY replaces fragmented telephone calls with closed-loop verified digital protocols.
-            </p>
-          </div>
-
-          {/* 4 Step Timeline Process */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 relative">
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 font-bold flex items-center justify-center text-xs">
-                01
-              </div>
-              <h4 className="text-sm font-bold text-white">Early 2G Warning</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Expectant mothers undergo weekly automated Swahili voice check-ins or USSD screening. Symptoms are instantly parsed for preeclampsia and PPH risk.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 font-bold flex items-center justify-center text-xs">
-                02
-              </div>
-              <h4 className="text-sm font-bold text-white">Capacity Verification</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                When a clinic midwife initiates transfer, SEQOY algorithmically cross-checks ICU bed, theatre readiness, and blood match across KNH, Pumwani, and Mama Lucy.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 font-bold flex items-center justify-center text-xs">
-                03
-              </div>
-              <h4 className="text-sm font-bold text-white">Closed-Loop Transport</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Emergency EMS ambulance receives turn-by-turn routing, updates in-transit vitals (BP, FHR, O2), and alerts the receiving surgical team before arrival.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
-              <div className="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-400 font-bold flex items-center justify-center text-xs">
-                04
-              </div>
-              <h4 className="text-sm font-bold text-white">MPDSR Surveillance</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Transfer timestamps, delay durations, and clinical outcomes automatically populate county MPDSR audits to rectify bottlenecks and inform county health budgets.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 5. INTERACTIVE ROLE SANDBOX */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section id="roles" className="py-20 border-b border-slate-800/60 bg-slate-900/30">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-              Role-Based Access Control (RBAC)
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Designed for Shifts, Not Generic Dashboards
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              In high-stress medical environments, extraneous buttons cause errors. SEQOY tailors every interface specifically to the clinician&apos;s exact job.
-            </p>
-          </div>
-
-          {/* Interactive Cadre Selector */}
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {Object.keys(USER_PERSONAS).map((key) => {
-              const persona = USER_PERSONAS[key as keyof typeof USER_PERSONAS];
-              const isSelected = selectedPersonaKey === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setSelectedPersonaKey(key)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-                    isSelected
-                      ? 'bg-teal-500 text-slate-950 shadow-md'
-                      : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
-                  }`}
-                >
-                  <span>{persona.avatarInitials}</span>
-                  <span>{persona.roleTitle}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Selected Cadre Highlight Card */}
-          <div className="max-w-3xl mx-auto p-6 sm:p-8 rounded-3xl bg-slate-900 border border-slate-800 shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-              <div className="flex items-center gap-3.5">
-                <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm border ${selectedPersona.avatarColor}`}
-                >
-                  {selectedPersona.avatarInitials}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-white">{selectedPersona.name}</h3>
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
-                      {selectedPersona.facilityType}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-400">{selectedPersona.roleTitle} · {selectedPersona.facilityName}</p>
-                </div>
-              </div>
-
-              <Link
-                href={selectedPersona.primaryRoute}
-                className="btn-primary text-xs py-2 px-4 flex items-center justify-center gap-1.5 shrink-0"
+            <div className="mt-7 flex flex-wrap gap-3">
+              <a
+                href="#cta"
+                className="rounded-full bg-ink px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-ink/15 transition hover:bg-ink/85"
               >
-                <span>Launch This Workspace</span>
-                <Icon name="ArrowRightIcon" size={14} variant="outline" />
+                Schedule County Health Briefing
+              </a>
+              <Link
+                href="/capacity"
+                className="rounded-full border border-white/80 bg-white/70 px-6 py-3.5 text-sm font-bold text-ink backdrop-blur-md transition hover:bg-white"
+              >
+                Explore Clinical Portal
               </Link>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-                <p className="font-bold text-teal-400 text-xs">Shift Responsibility:</p>
-                <p className="text-slate-300 leading-relaxed">{selectedPersona.description}</p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-1.5">
-                <p className="font-bold text-white text-xs">Primary Landing Workspace:</p>
-                <p className="font-mono text-teal-300">{selectedPersona.primaryRoute}</p>
-                <p className="text-[11px] text-slate-400">
-                  Strictly hidden: irrelevant administrative grids, unnecessary data entry, unassigned modules.
-                </p>
-              </div>
+            <div className="mt-7 flex flex-wrap gap-2">
+              <span className="rounded-full bg-lilac px-3 py-1.5 text-xs font-medium text-ink-soft">County Health Directorates</span>
+              <span className="rounded-full bg-mint px-3 py-1.5 text-xs font-medium text-ink-soft">Level 4–6 Referral Facilities</span>
+              <span className="rounded-full bg-peach px-3 py-1.5 text-xs font-medium text-ink-soft">Primary Care Midwives</span>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 6. TRUST, SECURITY & INTEROPERABILITY */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section id="trust" className="py-20 border-b border-slate-800/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-              Institutional Trust &amp; Compliance
-            </span>
-            <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-              Built for Public Healthcare Rigor
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Deployable across national, county, and private hospital networks with enterprise-grade data protection and interoperability.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
-              <div className="w-9 h-9 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center">
-                <Icon name="ShieldCheckIcon" size={20} variant="outline" />
+          <div className="lg:col-span-6">
+            <div className="relative">
+              {/* Floating blood-stock chip */}
+              <div className="animate-floaty-card absolute -top-6 -right-4 z-20 flex items-center gap-3 rounded-2xl border border-white/90 bg-white/80 px-4 py-3 shadow-xl shadow-ink/5 backdrop-blur-md">
+                <span className="grid size-9 place-items-center rounded-xl bg-blush">
+                  <span className="font-bold text-rose-soft">O−</span>
+                </span>
+                <span>
+                  <span className="block text-sm font-bold leading-none">4 units ready</span>
+                  <span className="mt-1 block text-[11px] text-ink-soft">KNBTS satellite · synced 8 min ago</span>
+                </span>
               </div>
-              <h4 className="text-sm font-bold text-white">Kenya DPA (2019) Aligned</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Full compliance with the Kenya Data Protection Act. End-to-end data encryption in transit and at rest with role-restricted audit logs.
-              </p>
-            </div>
 
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-                <Icon name="CommandLineIcon" size={20} variant="outline" />
-              </div>
-              <h4 className="text-sm font-bold text-white">HL7 FHIR R4 Native</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Zero-data-custody middleware supporting standard FHIR bundles (`Patient`, `Observation`, `ServiceRequest`) for effortless EMR integration.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
-                <Icon name="DocumentChartBarIcon" size={20} variant="outline" />
-              </div>
-              <h4 className="text-sm font-bold text-white">MOH 711 &amp; KHIS2 Ready</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Automates maternal and perinatal indicators directly into Kenya Health Information System (DHIS2) for timely county reporting.
-              </p>
-            </div>
-
-            <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800 space-y-2.5">
-              <div className="w-9 h-9 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center">
-                <Icon name="HeartIcon" size={20} variant="outline" />
-              </div>
-              <h4 className="text-sm font-bold text-white">KNBTS Blood Transfusion</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Direct shortage broadcast links with the Kenya National Blood Transfusion Service for emergency postpartum hemorrhage supply.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 7. FREQUENTLY ASKED QUESTIONS */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section id="faq" className="py-20 border-b border-slate-800/60 bg-slate-900/30">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="text-center space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal-400">Clear Answers</span>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Frequently Asked Questions
-            </h2>
-          </div>
-
-          <div className="space-y-3">
-            {[
-              {
-                q: 'What if expectant mothers have basic 2G feature phones without internet?',
-                a: 'SEQOY is built specifically for this reality. Over 85% of maternal check-ins occur over standard 2G GSM telephony: zero-data USSD (*384*99#) and automated Saturday Voice AI calls in Swahili that speak directly to the mother with no app installation or airtime needed.',
-              },
-              {
-                q: 'Does SEQOY replace hospital Electronic Medical Records (like KenyaEMR)?',
-                a: 'No. SEQOY is an inter-facility emergency coordination switchboard, not a general hospital billing or pharmacy EMR. It exchanges clinical referral data with KenyaEMR and national systems via non-disruptive HL7 FHIR R4 APIs and automated MOH 711 exports.',
-              },
-              {
-                q: 'How is live hospital capacity kept up to date?',
-                a: 'Referral Hospital Charge Nurses and Bed Managers have a streamlined 1-tap mobile toggle taking less than 3 seconds per shift (e.g. toggling "Theatre 2: Busy with C-Section" or "ICU Bed Available: 1"). No tedious manual forms.',
-              },
-              {
-                q: 'How can County Health Departments pilot SEQOY?',
-                a: 'Deployments begin with a 90-day sub-county corridor pilot (e.g. connecting 5 primary dispensaries to 1 Level 4 and 1 Level 5 hospital). The system requires zero dedicated hardware beyond standard staff smartphones/computers and 2G telco shortcodes.',
-              },
-            ].map((faq, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden transition"
-              >
-                <button
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-4 font-bold text-xs sm:text-sm text-white hover:text-teal-400 transition"
-                >
-                  <span>{faq.q}</span>
-                  <Icon
-                    name="ChevronDownIcon"
-                    size={16}
-                    variant="outline"
-                    className={`shrink-0 transition-transform duration-200 ${
-                      activeFaq === idx ? 'rotate-180 text-teal-400' : 'text-slate-500'
-                    }`}
-                  />
-                </button>
-                {activeFaq === idx && (
-                  <div className="px-5 pb-5 text-xs text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
-                    {faq.a}
+              {/* Referral pipeline card */}
+              <div className="rounded-[2rem] border border-white/80 bg-white/55 p-5 shadow-2xl shadow-ink/10 backdrop-blur-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold">Incoming Referral Pipeline</p>
+                    <p className="text-[11px] text-ink-soft">Sorted by maternal danger score</p>
                   </div>
-                )}
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+                    <span className="size-1.5 animate-pulse rounded-full bg-emerald-soft" />
+                    Live
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 rounded-2xl border border-blush/50 bg-blush/60 p-3">
+                    <span className="grid size-9 place-items-center rounded-xl bg-white/70 text-xs font-bold text-rose-soft">
+                      9/10
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">Amina H. · 34 wks</p>
+                      <p className="truncate text-[11px] text-ink-soft">Eclampsia · BP 168/112 → Pumwani ETA 14m</p>
+                    </div>
+                    <span className="rounded-full bg-rose-soft px-2 py-1 text-[10px] font-bold text-white">CRITICAL</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-2xl border border-amber-200/60 bg-butter/70 p-3">
+                    <span className="grid size-9 place-items-center rounded-xl bg-white/70 text-xs font-bold text-amber-soft">
+                      5/10
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">Faith W. · 38 wks</p>
+                      <p className="truncate text-[11px] text-ink-soft">Reduced FM · BP 130/85 → walk-in triage</p>
+                    </div>
+                    <span className="rounded-full bg-amber-soft px-2 py-1 text-[10px] font-bold text-white">MONITOR</span>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="rounded-xl border border-white/70 bg-white/60 p-2.5 text-center">
+                    <p className="text-base font-bold">4</p>
+                    <p className="text-[10px] text-ink-soft">Open Theatres</p>
+                  </div>
+                  <div className="rounded-xl border border-white/70 bg-white/60 p-2.5 text-center">
+                    <p className="text-base font-bold">2</p>
+                    <p className="text-[10px] text-ink-soft">Open ICU Beds</p>
+                  </div>
+                  <div className="rounded-xl border border-white/70 bg-white/60 p-2.5 text-center">
+                    <p className="text-base font-bold">11</p>
+                    <p className="text-[10px] text-ink-soft">O− Units</p>
+                  </div>
+                </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Three Delays ─── */}
+        <section id="problem" className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+          <div className="rounded-[2rem] border border-white/70 bg-white/45 p-8 shadow-xl shadow-ink/5 backdrop-blur-xl md:p-10">
+            <div className="mb-8 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">The Three Delays We Remove</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight md:text-3xl">
+                No mother sent to a facility that cannot save her.
+              </h2>
+            </div>
+            <div className="grid gap-5 md:grid-cols-3">
+              {delays.map((d) => (
+                <article key={d.n} className={`rounded-3xl border border-white/70 p-6 ${d.bg}`}>
+                  <span className={`grid size-11 place-items-center rounded-2xl bg-white/80 text-sm font-bold ${d.chip}`}>
+                    {d.n}
+                  </span>
+                  <h3 className="mt-4 text-base font-bold">{d.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-soft">{d.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Five Cadres ─── */}
+        <section id="cadres" className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+          <div className="mb-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Who Uses It</p>
+            <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight md:text-3xl">
+              Five cadres, one live network.
+            </h2>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {cadres.map((c) => (
+              <Link
+                key={c.title}
+                href={c.href}
+                className="group rounded-3xl border border-white/70 bg-white/55 p-5 backdrop-blur-md transition hover:bg-white hover:shadow-md block"
+              >
+                <h3 className="font-display text-lg font-bold group-hover:text-brand transition">{c.title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-ink-soft">{c.body}</p>
+                <span className="mt-3 inline-block text-[11px] font-semibold text-brand underline opacity-0 group-hover:opacity-100 transition">
+                  Open Workspace &rarr;
+                </span>
+              </Link>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      {/* 8. CALL TO ACTION & FOOTER */}
-      {/* ─────────────────────────────────────────────────────────────────── */}
-      <section className="py-20 text-center relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 relative z-10">
-          <div className="w-12 h-12 rounded-2xl bg-teal-500/20 text-teal-400 border border-teal-500/30 flex items-center justify-center mx-auto text-xl">
-            🏥
+        {/* ─── Trust / Accountability ─── */}
+        <section id="trust" className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+          <div className="grid items-center gap-8 rounded-[2rem] border border-white/70 bg-white/45 p-8 shadow-xl shadow-ink/5 backdrop-blur-xl md:grid-cols-2 md:p-10">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Built on Trust</p>
+              <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight md:text-3xl">
+                No hallucinated triage. Your data stays sovereign.
+              </h2>
+              <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+                SEQOY listens to your existing KenyaEMR or Funsoft and syncs capacity silently — zero new data entry.
+                Recommendations are deterministic clinical rules, aligned to WHO Antenatal Guidelines and Kenya MoH MPDSR
+                frameworks, and compliant with the Kenya Data Protection Act 2019.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full bg-lilac px-3 py-1.5 text-xs font-medium text-ink-soft">WHO Antenatal Guidelines</span>
+                <span className="rounded-full bg-mint px-3 py-1.5 text-xs font-medium text-ink-soft">MoH MPDSR Framework</span>
+                <span className="rounded-full bg-peach px-3 py-1.5 text-xs font-medium text-ink-soft">Data Protection Act 2019</span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {trustStats.map((s) => (
+                <div key={s.label} className={`rounded-3xl border border-white/70 p-5 text-center ${s.bg}`}>
+                  <p className={`font-display text-3xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="mt-1 text-xs font-medium text-ink-soft">{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-            Ready to Protect Expectant Mothers in Your County?
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto leading-relaxed">
-            Eliminate referral delays, unannounced arrivals, and preventable maternal mortality with SEQOY&apos;s verified coordination network.
-          </p>
+        </section>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/capacity"
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-sm shadow-xl shadow-teal-500/25 transition flex items-center justify-center gap-2"
-            >
-              <span>Explore Live Clinical Portal</span>
-              <Icon name="ArrowRightIcon" size={16} variant="outline" />
-            </Link>
-
-            <Link
-              href="/my-pregnancy/1"
-              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 font-semibold text-sm transition"
-            >
-              <span>View Mother Pass UI</span>
-            </Link>
+        {/* ─── CTA + Contact ─── */}
+        <section id="cta" className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
+          <div className="relative overflow-hidden rounded-[2rem] bg-ink p-8 text-white md:p-12 shadow-2xl">
+            <div className="absolute -top-20 -right-16 size-72 rounded-full bg-brand/30 blur-3xl pointer-events-none" aria-hidden />
+            <div className="relative grid items-center gap-8 md:grid-cols-2">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand/90">Start a Sub-County Pilot</p>
+                <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">
+                  See your county's maternal network in 30 days.
+                </h2>
+                <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
+                  We onboard your primary clinics, connect the EMR via a read-only bridge, and stand up the referral
+                  dispatch network — no capital outlay, no new hardware.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <a href="mailto:partners@seqoy.health" className="rounded-full bg-white px-6 py-3.5 text-sm font-bold text-ink transition hover:bg-white/90">
+                    Request 30-Day Pilot
+                  </a>
+                  <Link href="/integrations" className="rounded-full border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-bold text-white transition hover:bg-white/20">
+                    Connect Your EMR Bridge
+                  </Link>
+                </div>
+              </div>
+              <div className="space-y-4 rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-white/50">Clinical Operations Line</p>
+                  <p className="mt-1 text-sm font-semibold">+254 700 118 220</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-white/50">Institutional Email</p>
+                  <p className="mt-1 text-sm font-semibold">partners@seqoy.health</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-white/50">Field Office</p>
+                  <p className="mt-1 text-sm font-semibold">4th Floor, Kibera Innovation Hub, Nairobi</p>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Global Bottom Footer */}
-      <footer className="border-t border-slate-800/80 py-8 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 bg-slate-950">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* ─── Footer ─── */}
+        <footer className="relative z-10 mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 border-t border-ink/10 px-6 pt-8 pb-10 sm:flex-row">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-300">SEQOY Health Network</span>
-            <span>· Nairobi, Kenya 🇰🇪</span>
+            <span className="font-display text-base font-bold text-ink">SEQOY</span>
+            <span className="text-xs text-ink-soft">© 2026 · Maternal Emergency Referral Network</span>
           </div>
-          <div className="flex items-center gap-4 text-[11px]">
-            <Link href="/login" className="hover:text-slate-300 transition">Clinical Staff Sign In</Link>
-            <Link href="/capacity" className="hover:text-slate-300 transition">Live Capacity</Link>
-            <Link href="/surveillance" className="hover:text-slate-300 transition">MPDSR Surveillance</Link>
-            <Link href="/integrations" className="hover:text-slate-300 transition">FHIR Interoperability</Link>
+          <div className="flex items-center gap-6 text-xs font-medium text-ink-soft">
+            <a href="#trust" className="transition hover:text-ink">Privacy</a>
+            <a href="#trust" className="transition hover:text-ink">Data Sovereignty</a>
+            <a href="#trust" className="transition hover:text-ink">Clinical Safety</a>
           </div>
-          <p className="text-[10px]">© 2026 SEQOY. All rights reserved. Zero Maternal Referral Blindness.</p>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

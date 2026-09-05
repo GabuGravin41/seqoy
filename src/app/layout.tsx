@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { DM_Sans } from 'next/font/google';
+import { DM_Sans, Fraunces } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -14,15 +14,22 @@ const dmSans = DM_Sans({
   display: 'swap',
 });
 
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-fraunces',
+  display: 'swap',
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: 'SEQOY — Maternal Health Monitoring & Hospital Capacity Network',
+  title: 'SEQOY — Zero-Blindness Maternal Emergency Referral & Hospital Capacity Network',
   description:
-    'SEQOY connects clinics and referral hospitals in real time — continuous patient risk monitoring and live capacity visibility to eliminate preventable maternal deaths in Kenya.',
+    'SEQOY matches mothers in obstetric emergencies to hospitals with verified open theatres, ICU beds, and compatible blood — before the ambulance leaves.',
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },
@@ -32,7 +39,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={dmSans.variable} suppressHydrationWarning>
+    <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
