@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useCurrentUser } from '@/context/AuthContext';
 import Icon from '@/components/ui/AppIcon';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
@@ -104,7 +104,7 @@ function getCellStyle(units: number): string {
 const hospitalShortNames = ['KNH', 'Pumwani', 'Mama Lucy', 'Kiambu L5', 'Mbagathi'];
 
 export default function BloodBankHeatmap() {
-  const { currentUser } = useAuth();
+  const currentUser = useCurrentUser();
   const [data, setData] = useState<BloodEntry[]>(initialBloodData);
   const [editModal, setEditModal] = useState<{ type: string; hospitalName: string; units: number } | null>(null);
 

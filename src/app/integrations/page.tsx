@@ -1,41 +1,62 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { CONNECTED_SYSTEMS, ConnectedSystem } from '@/lib/interoperability/adapters';
 import Icon from '@/components/ui/AppIcon';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
 
+interface CapacityRow {
+  facilityId: number;
+  facilityName: string;
+  syncMode: 'EHR_WEBHOOK' | 'MANUAL';
+  lastWebhookSyncAt?: string;
+  lastUpdated: string;
+}
+
 export default function IntegrationsPage() {
-  const [systems, setSystems] = useState<ConnectedSystem[]>(CONNECTED_SYSTEMS);
-  const [selectedSystem, setSelectedSystem] = useState<ConnectedSystem | null>(null);
+  const [facilities, setFacilities] = useState<CapacityRow[]>([]);
+  const [loading, setLoading] = useState(true);
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [fhirModalOpen, setFhirModalOpen] = useState(false);
   const [fhirPayload, setFhirPayload] = useState<any>(null);
   const [loadingFhir, setLoadingFhir] = useState(false);
 
-  const handleTestAdmissionSync = async () => {
+  const fetchFacilities = async () => {
+    try {
+      const res = await fetch('/api/hospitals/capacity');
+      const data = await res.json();
+      setFacilities(data.capacities ?? []);
+    } catch (e) {
+      console.warn('Failed to load facility sync status', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFacilities();
+  }, []);
+
+  const handleTestAdmissionSync = async (facilityId: number) => {
     setTestingWebhook(true);
     try {
       const res = await fetch('/api/interoperability/webhooks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          facilityMflCode: '13044',
-          eventType: 'PATIENT_ADMITTED',
-          wardType: 'ICU',
-          patientId: 'EHR-MOH-9021',
-        }),
+        body: JSON.stringify({ facilityId, eventType: 'PATIENT_ADMITTED', wardType: 'ICU' }),
       });
       const data = await res.json();
-      if (res.ok) {
-        toast.success('HIMS Webhook Received & Processed', {
-          description: 'Funsoft/OpenMRS event processed: ICU capacity automatically updated with 0 human data entry.',
+      if (res.ok && data.success) {
+        toast.success('HIMS webhook applied', {
+          description: `ICU capacity for this facility was decremented for real — this is what happens when a hospital's own EHR calls this endpoint.`,
         });
+        fetchFacilities();
+      } else {
+        toast.error(data.message || data.error || 'Webhook test failed');
       }
     } catch (e) {
-      toast.error('Webhook simulation failed');
+      toast.error('Webhook test failed');
     } finally {
       setTestingWebhook(false);
     }
@@ -55,153 +76,113 @@ export default function IntegrationsPage() {
     }
   };
 
+  const webhookConnected = facilities.filter((f) => f.syncMode === 'EHR_WEBHOOK').length;
+
   return (
     <AppLayout>
       <div className="px-6 lg:px-8 py-6 max-w-7xl mx-auto space-y-6">
-        {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-foreground tracking-tight">
-                HIMS & National Health Stack Interoperability
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30">
-                Non-Disruptive Middleware
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Zero double-entry: SEQOY integrates on top of existing EHRs (KenyaEMR, Funsoft), Smart Triage, KHIS2/DHIS2, and Blood Banks.
+            <h1 className="text-xl font-bold text-foreground tracking-tight">Facility Readiness Integration</h1>
+            <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+              Delay 3 works two ways: a hospital's own EHR/HIMS can push live bed/theatre updates through the webhook
+              below, or — for facilities without that integration yet — a bed manager updates capacity directly in
+              SEQOY. Both are shown honestly per facility; nothing here claims a live vendor connection that doesn't exist.
             </p>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleInspectFHIR}
-              className="btn-secondary text-xs"
-            >
-              <Icon name="CodeBracketIcon" size={14} variant="outline" className="text-primary" />
-              Inspect HL7 FHIR Bundle
-            </button>
-            <button
-              onClick={handleTestAdmissionSync}
-              disabled={testingWebhook}
-              className="btn-primary text-xs"
-            >
-              <Icon name="ArrowPathIcon" size={14} variant="outline" />
-              {testingWebhook ? 'Simulating...' : 'Simulate Inbound HIMS Webhook'}
-            </button>
-          </div>
+          <button onClick={handleInspectFHIR} className="btn-secondary text-xs">
+            <Icon name="CodeBracketIcon" size={14} variant="outline" className="text-primary" />
+            Inspect HL7 FHIR Bundle
+          </button>
         </div>
 
-        {/* Value Proposition Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-card border border-border p-4 rounded-xl card-glow-primary space-y-1.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold">
-              ⚡
-            </div>
-            <h3 className="text-xs font-bold text-foreground">Zero Workflow Disruption</h3>
+            <h3 className="text-xs font-bold text-foreground">EHR Webhook (Zero Re-typing)</h3>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Clinicians keep using their current systems (KenyaEMR, Funsoft). SEQOY silently synchronizes beds, vitals, and transfer orders in the background.
+              A hospital's EHR/HIMS calls <code className="font-mono">/api/interoperability/webhooks</code> on every
+              admission/discharge — no one re-types anything.
             </p>
           </div>
-
           <div className="bg-card border border-border p-4 rounded-xl card-glow-primary space-y-1.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-              🌐
-            </div>
-            <h3 className="text-xs font-bold text-foreground">HL7 FHIR R4 Standard</h3>
+            <h3 className="text-xs font-bold text-foreground">Manual Update Fallback</h3>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Standardized Patient, Observation, and ServiceRequest schemas ensure instant compliance with Ministry of Health (MOH) digital health guidelines.
+              Facilities without EHR integration use the Capacity page's bed manager screen — a 10-second update, not
+              a new system to learn.
             </p>
           </div>
-
           <div className="bg-card border border-border p-4 rounded-xl card-glow-primary space-y-1.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-              📊
-            </div>
-            <h3 className="text-xs font-bold text-foreground">Automated KHIS2 / DHIS2 Reporting</h3>
+            <h3 className="text-xs font-bold text-foreground">HL7 FHIR R4 Shapes</h3>
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              MOH 711 & 105 maternal audit indicators are mapped automatically to DHIS2, cutting hours of manual paper tallying for health records officers.
+              Referral data is transformed into standard Patient/Observation/ServiceRequest resources for any EHR that
+              can ingest FHIR.
             </p>
           </div>
         </div>
 
-        {/* Connected Systems Grid */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="section-header text-sm">Active Connected Systems & Gateways</h2>
-            <span className="text-xs text-muted-foreground">{systems.length} Active Adapters</span>
+            <h2 className="section-header text-sm">Facility Sync Status</h2>
+            <span className="text-xs text-muted-foreground">
+              {webhookConnected} of {facilities.length} facilities on live EHR webhook
+            </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {systems.map((sys) => (
-              <div
-                key={sys.id}
-                className="bg-card border border-border rounded-xl p-5 card-glow-primary flex flex-col justify-between gap-4"
-              >
+            {!loading && facilities.length === 0 && (
+              <p className="text-xs text-muted-foreground col-span-3 text-center py-8">No referral facilities configured yet.</p>
+            )}
+            {facilities.map((f) => (
+              <div key={f.facilityId} className="bg-card border border-border rounded-xl p-5 card-glow-primary flex flex-col justify-between gap-4">
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <h3 className="text-sm font-bold text-foreground">{sys.name}</h3>
-                      <p className="text-[11px] text-muted-foreground font-medium">Vendor: {sys.vendor}</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      {sys.status}
+                    <h3 className="text-sm font-bold text-foreground">{f.facilityName}</h3>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                        f.syncMode === 'EHR_WEBHOOK'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          : 'bg-muted text-muted-foreground border-border'
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${f.syncMode === 'EHR_WEBHOOK' ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground'}`} />
+                      {f.syncMode === 'EHR_WEBHOOK' ? 'EHR Webhook' : 'Manual Update'}
                     </span>
                   </div>
-
-                  <p className="text-xs text-muted-foreground leading-relaxed mt-2">
-                    {sys.description}
+                  <p className="text-[11px] text-muted-foreground">
+                    {f.syncMode === 'EHR_WEBHOOK' && f.lastWebhookSyncAt
+                      ? `Last webhook sync: ${new Date(f.lastWebhookSyncAt).toLocaleString()}`
+                      : `Last manual update: ${new Date(f.lastUpdated).toLocaleString()}`}
                   </p>
                 </div>
-
-                <div className="border-t border-border pt-3 space-y-2 text-xs">
-                  <div className="flex items-center justify-between text-muted-foreground text-[11px]">
-                    <span>Protocol / Spec:</span>
-                    <span className="font-mono font-semibold text-primary">{sys.protocol}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-muted-foreground text-[11px]">
-                    <span>Active Facilities:</span>
-                    <span className="font-bold text-foreground font-tabular">{sys.activeFacilitiesCount} Hospitals</span>
-                  </div>
-                  <div className="flex items-center justify-between text-muted-foreground text-[11px]">
-                    <span>Last Heartbeat:</span>
-                    <span className="text-foreground">{sys.lastSync}</span>
-                  </div>
-                </div>
+                <button
+                  onClick={() => handleTestAdmissionSync(f.facilityId)}
+                  disabled={testingWebhook}
+                  className="btn-secondary text-xs"
+                >
+                  <Icon name="ArrowPathIcon" size={13} variant="outline" />
+                  Send Test Admission Webhook
+                </button>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* FHIR Payload Inspector Modal */}
       <Modal
         open={fhirModalOpen}
         onClose={() => setFhirModalOpen(false)}
         title="HL7 FHIR R4 Referral Bundle Inspector"
-        description="Standardized JSON FHIR bundle transmitted to receiving hospital HIMS / EHR"
+        description="Standardized JSON FHIR bundle shape for a receiving hospital's EHR"
         size="lg"
       >
         <div className="space-y-4 text-xs">
           <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-xl border border-border">
-            <span className="font-mono text-[11px] text-muted-foreground">
-              GET /api/interoperability/fhir?referralId=1
-            </span>
-            <span className="px-2 py-0.5 bg-primary/20 text-primary font-bold rounded text-[10px]">
-              200 OK · application/fhir+json
-            </span>
+            <span className="font-mono text-[11px] text-muted-foreground">GET /api/interoperability/fhir?referralId=1</span>
+            <span className="px-2 py-0.5 bg-primary/20 text-primary font-bold rounded text-[10px]">200 OK · application/fhir+json</span>
           </div>
-
           <div className="bg-slate-950 p-4 rounded-xl border border-border max-h-[50vh] overflow-y-auto font-mono text-[11px] text-emerald-400 scrollbar-thin">
-            {loadingFhir ? (
-              <p className="text-slate-400">Loading FHIR payload...</p>
-            ) : (
-              <pre>{JSON.stringify(fhirPayload, null, 2)}</pre>
-            )}
+            {loadingFhir ? <p className="text-slate-400">Loading FHIR payload...</p> : <pre>{JSON.stringify(fhirPayload, null, 2)}</pre>}
           </div>
-
           <div className="flex justify-end gap-2 pt-2 border-t border-border">
             <button
               onClick={() => {

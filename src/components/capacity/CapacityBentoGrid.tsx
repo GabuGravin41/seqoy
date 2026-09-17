@@ -5,7 +5,7 @@ import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
 import { toast } from 'sonner';
-import { useAuth } from '@/context/AuthContext';
+import { useCurrentUser } from '@/context/AuthContext';
 
 interface Hospital {
   id: string;
@@ -26,6 +26,8 @@ interface Hospital {
   overallStatus: 'AVAILABLE' | 'LIMITED' | 'FULL' | 'OFFLINE';
   oNegativeUnits: number;
   acceptingReferrals: boolean;
+  /** Delay 3: is this number coming from the hospital's own EHR/HIMS webhook, or typed in manually? */
+  syncMode?: 'EHR_WEBHOOK' | 'MANUAL';
 }
 
 const defaultHospitals: Hospital[] = [
@@ -185,7 +187,7 @@ const tierColors: Record<Hospital['tier'], string> = {
 };
 
 export default function CapacityBentoGrid() {
-  const { currentUser } = useAuth();
+  const currentUser = useCurrentUser();
   const [hospitals, setHospitals] = useState<Hospital[]>(defaultHospitals);
 
   const handleAdjustBed = (hospitalId: string, delta: number) => {
@@ -244,6 +246,7 @@ export default function CapacityBentoGrid() {
               overallStatus: isFull ? 'FULL' : isLimited ? 'LIMITED' : 'AVAILABLE',
               oNegativeUnits: oNeg,
               acceptingReferrals: !isFull,
+              syncMode: c.syncMode,
             };
           });
           setHospitals(mapped);
@@ -263,7 +266,7 @@ export default function CapacityBentoGrid() {
     setDispatching(true);
 
     try {
-      const res = await fetch('/api/referrals/dispatch', {
+      const res = await fetch('/api/referrals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -283,14 +286,19 @@ export default function CapacityBentoGrid() {
       setDispatching(false);
       setDispatchModal(null);
 
-      toast.success(`Referral dispatched to ${dispatchModal.name}`, {
-        description: data.message || `Emergency ambulance ${data?.transport?.ambulanceCallSign || 'MEDIC-01'} dispatched.`,
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to send referral');
+        return;
+      }
+
+      toast.success(`Referral sent to ${dispatchModal.name}`, {
+        description: data.message || `${dispatchModal.name} has confirmed capacity and will be notified.`,
       });
 
       fetchLiveGrid();
     } catch (e) {
       setDispatching(false);
-      toast.error('Failed to dispatch referral');
+      toast.error('Failed to send referral');
     }
   };
 
@@ -395,7 +403,14 @@ export default function CapacityBentoGrid() {
                     {h.oNegativeUnits === 0 ? 'OUT OF STOCK' : `${h.oNegativeUnits} units`}
                   </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground">Updated {h.lastUpdated}</span>
+                <span
+                  className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                    h.syncMode === 'EHR_WEBHOOK' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                  }`}
+                  title={h.syncMode === 'EHR_WEBHOOK' ? 'Synced automatically from this hospital\'s EHR' : 'Updated manually by hospital staff'}
+                >
+                  {h.syncMode === 'EHR_WEBHOOK' ? 'EHR-synced' : 'Manual update'} · {h.lastUpdated}
+                </span>
               </div>
 
               {/* Bed Manager Capacity Controls vs Midwife Dispatch */}
@@ -434,8 +449,8 @@ export default function CapacityBentoGrid() {
                       : 'bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20'
                   }`}
                 >
-                  <Icon name="TruckIcon" size={14} variant="outline" />
-                  {isUnavailable ? 'Not Accepting Referrals' : 'Dispatch Emergency Ambulance'}
+                  <Icon name="ArrowsRightLeftIcon" size={14} variant="outline" />
+                  {isUnavailable ? 'Not Accepting Referrals' : 'Refer Patient to This Facility'}
                 </button>
               )}
             </div>
@@ -447,8 +462,8 @@ export default function CapacityBentoGrid() {
       <Modal
         open={!!dispatchModal}
         onClose={() => setDispatchModal(null)}
-        title="Dispatch Emergency Referral"
-        description={`Send patient to ${dispatchModal?.name} via Emergency Transport`}
+        title="Refer Patient to This Facility"
+        description={`Send a Delay-3 referral to ${dispatchModal?.name} — no ambulance is dispatched by SEQOY; onward transport is arranged separately`}
         size="md"
       >
         {dispatchModal && (
@@ -515,7 +530,7 @@ export default function CapacityBentoGrid() {
                 className="text-info flex-shrink-0 mt-0.5"
               />
               <p className="text-xs text-info/90 leading-relaxed">
-                Pre-triage clinical vitals and Voice AI call transcripts will be transmitted to {dispatchModal.shortName} before arrival. An MPDSR audit record will be logged automatically.
+                {dispatchModal.shortName} will see this referral immediately with the reserved ICU bed, theatre, and blood units confirmed. Transport to the facility is arranged separately — SEQOY does not dispatch ambulances.
               </p>
             </div>
 
@@ -527,12 +542,12 @@ export default function CapacityBentoGrid() {
                 {dispatching ? (
                   <>
                     <Icon name="ArrowPathIcon" size={14} variant="outline" className="animate-spin" />
-                    Dispatching Transitica...
+                    Sending Referral...
                   </>
                 ) : (
                   <>
-                    <Icon name="TruckIcon" size={14} variant="outline" />
-                    Dispatch Ambulance
+                    <Icon name="ArrowsRightLeftIcon" size={14} variant="outline" />
+                    Send Referral
                   </>
                 )}
               </button>

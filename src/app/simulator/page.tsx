@@ -5,7 +5,7 @@ import {
   Phone,
   Radio,
   Hospital,
-  Ambulance,
+  ArrowLeftRight,
   Activity,
   AlertTriangle,
   CheckCircle2,
@@ -189,11 +189,11 @@ export default function SimulatorPage() {
     }
   };
 
-  // Dispatch Emergency Ambulance
-  const triggerAmbulanceDispatch = async (receivingFacilityId: number) => {
+  // Send Delay-3 Facility Referral (no ambulance/transport coordination — that's out of scope)
+  const sendFacilityReferral = async (receivingFacilityId: number) => {
     setDispatchLoading(true);
     try {
-      const res = await fetch("/api/referrals/dispatch", {
+      const res = await fetch("/api/referrals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -284,8 +284,8 @@ export default function SimulatorPage() {
               activeTab === "referral" ? "bg-emerald-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            <Ambulance className="w-3.5 h-3.5" />
-            4. Smart Match & Dispatch
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+            4. Smart Match & Refer
           </button>
           <button
             onClick={() => setActiveTab("mpdsr")}
@@ -711,8 +711,8 @@ export default function SimulatorPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Ambulance className="w-5 h-5 text-emerald-400" />
-                Emergency Referral Request
+                <ArrowLeftRight className="w-5 h-5 text-emerald-400" />
+                Facility Referral Request
               </h3>
               <p className="text-xs text-slate-400">
                 Referring Clinic: <strong className="text-white">Kangemi Health Centre</strong> (Westlands)
@@ -823,7 +823,7 @@ export default function SimulatorPage() {
 
                       <button
                         onClick={() =>
-                          triggerAmbulanceDispatch(referralMatchResult.recommendedHospital.facility.id)
+                          sendFacilityReferral(referralMatchResult.recommendedHospital.facility.id)
                         }
                         disabled={dispatchLoading || Boolean(dispatchSuccess)}
                         className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition shadow-lg"
@@ -833,30 +833,28 @@ export default function SimulatorPage() {
                         ) : dispatchSuccess ? (
                           <>
                             <CheckCircle2 className="w-4 h-4" />
-                            Ambulance Dispatched ({dispatchSuccess.transport?.ambulanceCallSign || 'MEDIC-01'})
+                            Referral Sent ({dispatchSuccess.referral?.referralCode || 'SEQ-REF'})
                           </>
                         ) : (
                           <>
-                            <Ambulance className="w-4 h-4" />
-                            1-Click Referral Transfer & Ambulance Dispatch
+                            <ArrowLeftRight className="w-4 h-4" />
+                            1-Click Send Referral to This Facility
                           </>
                         )}
                       </button>
                     </div>
                   )}
 
-                  {/* Dispatch Telemetry confirmation */}
+                  {/* Referral confirmation — no ambulance/transport tracking, that's out of product scope */}
                   {dispatchSuccess && (
                     <div className="bg-slate-950 border border-emerald-500/50 p-4 rounded-2xl text-xs space-y-2">
                       <div className="flex items-center gap-2 text-emerald-400 font-bold">
                         <Radio className="w-4 h-4 animate-pulse" />
-                        Ambulance Dispatched & EHR Handover Transmitted
+                        Referral Recorded & Facility Notified
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-slate-300">
-                        <div>Dispatch ID: <strong className="text-white">{dispatchSuccess.transport?.dispatchId || 'DISPATCH-001'}</strong></div>
-                        <div>Call Sign: <strong className="text-white">{dispatchSuccess.transport?.ambulanceCallSign || 'MEDIC-01'}</strong></div>
-                        <div>ETA: <strong className="text-white">{dispatchSuccess.transport?.estimatedArrivalMinutes || 18} mins</strong></div>
-                        <div>Driver: <strong className="text-white">{dispatchSuccess.transport?.driverName || 'Driver'} ({dispatchSuccess.transport?.driverPhone || ''})</strong></div>
+                        <div>Referral Code: <strong className="text-white">{dispatchSuccess.referral?.referralCode || 'SEQ-REF'}</strong></div>
+                        <div>Status: <strong className="text-white">{dispatchSuccess.referral?.status || 'REQUESTED'}</strong></div>
                       </div>
                     </div>
                   )}
@@ -885,40 +883,34 @@ export default function SimulatorPage() {
                   </p>
                 </div>
                 <span className="text-xs bg-emerald-950 text-emerald-400 border border-emerald-800 px-3 py-1 rounded-full font-bold">
-                  Zero Preventable Fatalities
+                  {mpdsrData?.report?.insufficientData ? 'Awaiting First Audits' : `${mpdsrData?.report?.totalAudited ?? 0} Cases Audited`}
                 </span>
               </div>
 
-              {/* Three Delays Metric Cards */}
+              {/* Delay 1 & Delay 3 Metric Cards — this product doesn't address Delay 2 (transport) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                  <span className="text-xs text-slate-400 block font-semibold">Delay 1: Decision to Seek Care</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Delay 1: Danger Sign Identified in Audits</span>
                   <span className="text-3xl font-black text-emerald-400 mt-1 block">
-                    {mpdsrData?.threeDelaysSummary?.delay1?.averageMinutes || 15} mins
+                    {mpdsrData?.report?.delay1IdentifiedRatePercent ?? 0}%
                   </span>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    {mpdsrData?.threeDelaysSummary?.delay1?.impact}
-                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">Share of audited cases where early check-in flagged a danger sign.</p>
                 </div>
 
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                  <span className="text-xs text-slate-400 block font-semibold">Delay 2: Transit to Capable Facility</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Delay 3: Avg. Time to Admission</span>
                   <span className="text-3xl font-black text-emerald-400 mt-1 block">
-                    {mpdsrData?.threeDelaysSummary?.delay2?.averageMinutes || 18} mins
+                    {mpdsrData?.report?.averageDelay3Minutes != null ? `${mpdsrData.report.averageDelay3Minutes} mins` : 'No data yet'}
                   </span>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    {mpdsrData?.threeDelaysSummary?.delay2?.impact}
-                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">From receiving facility acknowledging the referral to admission.</p>
                 </div>
 
                 <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                  <span className="text-xs text-slate-400 block font-semibold">Delay 3: Admission to ICU/Theatre</span>
+                  <span className="text-xs text-slate-400 block font-semibold">Preventable Delay Rate</span>
                   <span className="text-3xl font-black text-emerald-400 mt-1 block">
-                    {mpdsrData?.threeDelaysSummary?.delay3?.averageMinutes || 5} mins
+                    {mpdsrData?.report?.preventableRatePercent ?? 0}%
                   </span>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    {mpdsrData?.threeDelaysSummary?.delay3?.impact}
-                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">Audited cases where a preventable delay was identified.</p>
                 </div>
               </div>
 
@@ -928,7 +920,7 @@ export default function SimulatorPage() {
                   Recent MPDSR Audit Log Entries:
                 </h4>
                 <div className="space-y-2">
-                  {mpdsrData?.metrics?.recentAuditLogs?.map((log: any) => (
+                  {mpdsrData?.recentAuditLogs?.map((log: any) => (
                     <div key={log.id} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-200">{log.patientName}</span>

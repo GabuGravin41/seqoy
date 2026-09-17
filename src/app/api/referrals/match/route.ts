@@ -1,43 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { matchReferralHospitals, ReferralRequirement } from "@/lib/routing/capacity-matcher";
-import { mockStore } from "@/db/mock-store";
+import * as patientsRepo from "@/db/repository/patients";
+import * as facilitiesRepo from "@/db/repository/facilities";
+import * as capacitiesRepo from "@/db/repository/capacities";
+import { requirePermission } from "@/lib/rbac/server";
 
+const matchSchema = z.object({
+  referringFacilityId: z.coerce.number().int().default(1),
+  patientId: z.coerce.number().int().optional(),
+  patientBloodType: z.string().optional(),
+  icuNeeded: z.boolean().default(true),
+  theatreNeeded: z.boolean().default(true),
+  bloodUnitsNeeded: z.coerce.number().int().min(0).default(2),
+  urgency: z.enum(["URGENT", "EMERGENCY", "CRITICAL_STAT"]).default("EMERGENCY"),
+});
+
+/** Delay 3: which referral hospital genuinely has capacity for this patient right now. */
 export async function POST(req: NextRequest) {
+  const auth = await requirePermission("canViewCapacity");
+  if (!auth.ok) return auth.response;
+
   try {
-    const body = await req.json();
-    const {
-      referringFacilityId = 1,
-      patientId,
-      patientBloodType,
-      icuNeeded = true,
-      theatreNeeded = true,
-      bloodUnitsNeeded = 2,
-      urgency = "EMERGENCY",
-    } = body;
+    const body = matchSchema.parse(await req.json());
 
-    let bloodType = patientBloodType;
-    let patientName = "Emergency Patient";
-
-    if (patientId) {
-      const patient = mockStore.patients.find((p) => p.id === Number(patientId));
+    let bloodType = body.patientBloodType;
+    let patientName = "Expectant Mother";
+    if (body.patientId) {
+      const patient = await patientsRepo.getPatientById(body.patientId);
       if (patient) {
         if (!bloodType) bloodType = patient.bloodType;
         patientName = patient.fullName;
       }
     }
-
     if (!bloodType) bloodType = "O+";
 
     const requirement: ReferralRequirement = {
-      referringFacilityId: Number(referringFacilityId),
+      referringFacilityId: body.referringFacilityId,
       patientBloodType: bloodType,
-      icuNeeded: Boolean(icuNeeded),
-      theatreNeeded: Boolean(theatreNeeded),
-      bloodUnitsNeeded: Number(bloodUnitsNeeded),
-      urgency: urgency as any,
+      icuNeeded: body.icuNeeded,
+      theatreNeeded: body.theatreNeeded,
+      bloodUnitsNeeded: body.bloodUnitsNeeded,
+      urgency: body.urgency,
     };
 
-    const matchResult = matchReferralHospitals(requirement);
+    const [facilities, capacities] = await Promise.all([facilitiesRepo.listFacilities(), capacitiesRepo.listCapacities()]);
+    const matchResult = matchReferralHospitals(requirement, facilities, capacities);
 
     return NextResponse.json({
       success: true,
@@ -48,10 +56,13 @@ export async function POST(req: NextRequest) {
       blindReferralRiskIdentified: matchResult.blindReferralRiskIdentified,
       avoidedBlindHospitalName: matchResult.avoidedBlindHospitalName,
       insight: matchResult.blindReferralRiskIdentified
-        ? `🚨 AVOIDED REFERRAL BLINDNESS: Standard transfer to ${matchResult.avoidedBlindHospitalName} was prevented because required ICU beds or blood were depleted. Safely routed to ${matchResult.recommendedHospital?.facility.name}.`
-        : `✅ Confirmed capable facility found within ${matchResult.recommendedHospital?.estimatedTransitMinutes} mins transit.`,
+        ? `Referral blindness avoided: ${matchResult.avoidedBlindHospitalName} was ruled out because required beds or blood were depleted. ${matchResult.recommendedHospital?.facility.name} has confirmed capacity instead.`
+        : `Confirmed capable facility found within ${matchResult.recommendedHospital?.estimatedTransitMinutes ?? "an estimated"} mins travel.`,
     });
   } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: "Invalid match request", details: error.issues }, { status: 400 });
+    }
     return NextResponse.json({ error: error.message || "Failed to compute referral match" }, { status: 500 });
   }
 }

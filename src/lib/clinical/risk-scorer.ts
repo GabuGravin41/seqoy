@@ -90,7 +90,7 @@ export function evaluateClinicalRisk(input: TriageInput): TriageResult {
   if (finalScore >= 60 || input.hasVaginalBleeding || (systolic >= 160 && input.hasBlurredVision)) {
     riskLevel = "CRITICAL_EMERGENCY";
     flaggedForImmediateReferral = true;
-    recommendedAction = "IMMEDIATE RED FLAG: Dispatch emergency transport to Level 5/6 hospital with ICU, surgical theatre, and blood reserve.";
+    recommendedAction = "IMMEDIATE RED FLAG: Arrange urgent transfer to a Level 5/6 hospital with ICU, surgical theatre, and blood reserve.";
     swahiliSummary = "DHARURA YA HARAKA: Mama anahitaji rufaa ya dharura kwenye hospitali kubwa yenye ICU na benki ya damu mara moja.";
   } else if (finalScore >= 25) {
     riskLevel = "ELEVATED_RISK";

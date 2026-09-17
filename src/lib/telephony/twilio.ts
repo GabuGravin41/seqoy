@@ -112,6 +112,43 @@ export async function sendEmergencySMSAlert({
   }
 }
 
+const whatsappFromNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
+
+/**
+ * Sends the weekly Delay-1 WhatsApp check-in message via Twilio's WhatsApp
+ * Business API to mothers who opted into WhatsApp over plain SMS.
+ */
+export async function sendWhatsAppMessage({
+  toPhoneNumber,
+  message,
+}: {
+  toPhoneNumber: string;
+  message: string;
+}) {
+  const to = toPhoneNumber.startsWith('whatsapp:') ? toPhoneNumber : `whatsapp:${toPhoneNumber}`;
+
+  if (!twilioClient) {
+    console.log(`[Twilio Mock WhatsApp] To: ${to} | Message: ${message}`);
+    return {
+      success: true,
+      mode: 'MOCK' as const,
+      messageSid: `WA_MOCK_${Date.now()}`,
+      status: 'sent',
+    };
+  }
+
+  try {
+    const msg = await twilioClient.messages.create({
+      body: message,
+      to,
+      from: whatsappFromNumber,
+    });
+    return { success: true, mode: 'LIVE' as const, messageSid: msg.sid, status: msg.status };
+  } catch (error: any) {
+    return { success: false, error: error?.message || 'Failed to send WhatsApp message' };
+  }
+}
+
 /**
  * Generates TwiML for maternal voice check-in with speech recognition
  */

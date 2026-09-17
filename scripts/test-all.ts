@@ -2,9 +2,9 @@ import { evaluateClinicalRisk } from "../src/lib/clinical/risk-scorer";
 import { handleUSSDSession } from "../src/lib/ussd/state-machine";
 import { parseVoiceTranscription } from "../src/lib/voice/ai-agent";
 import { matchReferralHospitals } from "../src/lib/routing/capacity-matcher";
-import { dispatchEmergencyAmbulance } from "../src/lib/transport/dispatch";
 import { generateCountyMPDSRReport } from "../src/lib/analytics/mpdsr";
-import { mockMpdsrAuditLogs } from "../src/db/mock-store";
+import { initialFacilities, initialCapacities, initialMPDSRLogs } from "../src/db/mock-store";
+import { hasPermission } from "../src/lib/rbac/permissions";
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -47,7 +47,7 @@ assert(
   "Normal pregnancy correctly triaged with zero false positive red flags"
 );
 
-// 2. USSD State Machine Tests
+// 2. USSD State Machine Tests (Delay 1)
 console.log("\n2️⃣ Testing USSD Session State Machine...");
 const ussdRoot = handleUSSDSession({
   sessionId: "SES-101",
@@ -64,13 +64,26 @@ const ussdSwahiliEmergency = handleUSSDSession({
   sessionId: "SES-101",
   serviceCode: "*384*99#",
   phoneNumber: "+254712345678",
-  text: "1*1*1*1*2", // Swahili -> Check-in -> Severe Headache/Vision -> Bleeding -> Baby distress
+  text: "1*1*1*1*2",
 });
 assert(
   ussdSwahiliEmergency.response.startsWith("END") &&
     ussdSwahiliEmergency.shouldSaveCheckin === true &&
     ussdSwahiliEmergency.triageData?.hasSevereHeadache === true,
   "USSD Swahili multi-step check-in concludes with emergency END warning and saves check-in"
+);
+
+const ussdScheduleChange = handleUSSDSession({
+  sessionId: "SES-102",
+  serviceCode: "*384*99#",
+  phoneNumber: "+254712345678",
+  text: "1*5*6*2", // Swahili -> Change schedule -> Saturday -> Afternoon
+});
+assert(
+  ussdScheduleChange.response.startsWith("END") &&
+    ussdScheduleChange.scheduleUpdate?.preferredCheckinDayOfWeek === 6 &&
+    ussdScheduleChange.scheduleUpdate?.preferredCheckinHour === 14,
+  "USSD lets a mother set her own preferred call day/time"
 );
 
 // 3. Voice AI Entity Extraction Tests
@@ -86,54 +99,54 @@ assert(
   "Voice AI correctly extracts Swahili symptoms (kichwa, ukungu, uvimbe)"
 );
 
-// 4. Smart Capacity-Aware Referral Matcher Tests (Delay 2 & 3 Solution)
+// 4. Smart Capacity-Aware Referral Matcher Tests (Delay 3 Solution)
 console.log("\n4️⃣ Testing Smart Capacity Matcher (Anti-Referral Blindness Engine)...");
-const match = matchReferralHospitals({
-  referringFacilityId: 1, // Kangemi
-  patientBloodType: "O-",
-  icuNeeded: true,
-  theatreNeeded: true,
-  bloodUnitsNeeded: 2,
-  urgency: "CRITICAL_STAT",
-});
+const match = matchReferralHospitals(
+  {
+    referringFacilityId: 1, // Kangemi
+    patientBloodType: "O-",
+    icuNeeded: true,
+    theatreNeeded: true,
+    bloodUnitsNeeded: 2,
+    urgency: "CRITICAL_STAT",
+  },
+  initialFacilities,
+  initialCapacities
+);
 
 assert(
   match.recommendedHospital !== null &&
     match.recommendedHospital.capacity.icuBedsAvailable > 0 &&
     match.blindReferralRiskIdentified === true,
-  "Smart Matcher prevents blind transfer to KNH (0 ICU beds) and safely routes to capable Level 5 facility"
+  "Smart Matcher prevents blind referral to KNH (0 ICU beds) and safely routes to a capable Level 5 facility"
 );
 
-// 5. Ambulance Dispatch Tests
-console.log("\n5️⃣ Testing Emergency Transport Dispatcher...");
-async function testDispatch() {
-  const dispatch = await dispatchEmergencyAmbulance({
-    referralId: 1,
-    referringFacilityId: 1,
-    referringFacilityName: "Kangemi Clinic",
-    receivingFacilityId: 4,
-    receivingFacilityName: "Kiambu Level 5",
-    patientName: "Amina Wanjiku",
-    clinicalIndication: "SEVERE_PREECLAMPSIA",
-    urgencyLevel: "CRITICAL_STAT",
-  });
-
-  assert(
-    dispatch.dispatchId.startsWith("DISPATCH-") &&
-      dispatch.estimatedArrivalMinutes > 0 &&
-      dispatch.status === "DISPATCHED",
-    "Emergency transport dispatcher creates dispatch record with real-time ETA"
-  );
-}
-
-// 6. MPDSR Analytics Tests
-console.log("\n6️⃣ Testing MPDSR 3-Delays Analytics...");
-const mpdsr = generateCountyMPDSRReport(mockMpdsrAuditLogs);
+// 5. RBAC Permission Matrix Tests
+console.log("\n5️⃣ Testing RBAC Permission Matrix...");
 assert(
-  mpdsr.totalAudited > 0 &&
-    mpdsr.countySummary.nairobiMaternalMortalityAvoidanceScore > 0 &&
-    mpdsr.countySummary.criticalInterventionRecommendations.length > 0,
-  "MPDSR reporting module computes Delay metrics and County intervention summary"
+  hasPermission("BED_MANAGER", "canUpdateCapacity") && !hasPermission("BED_MANAGER", "canUpdateBloodStock"),
+  "Bed manager can update bed capacity but not blood stock"
+);
+assert(
+  hasPermission("BLOOD_BANK_OFFICER", "canUpdateBloodStock") && !hasPermission("BLOOD_BANK_OFFICER", "canCreateReferral"),
+  "Blood bank officer can update blood stock but not create referrals"
+);
+assert(
+  hasPermission("SYSTEM_ADMIN", "canManageSystem") && hasPermission("SYSTEM_ADMIN", "canCreateReferral"),
+  "System admin has unrestricted permissions"
+);
+
+// 6. MPDSR Analytics Tests (Delay 1 & Delay 3 only — Delay 2 is out of scope)
+console.log("\n6️⃣ Testing MPDSR Analytics (Delay 1 & Delay 3)...");
+const mpdsr = generateCountyMPDSRReport(initialMPDSRLogs);
+assert(
+  mpdsr.totalAudited > 0 && !mpdsr.insufficientData,
+  "MPDSR reporting module computes real Delay 1 / Delay 3 metrics from audit logs"
+);
+const emptyMpdsr = generateCountyMPDSRReport([]);
+assert(
+  emptyMpdsr.insufficientData === true && emptyMpdsr.averageDelay3Minutes === null,
+  "MPDSR reports insufficient data honestly instead of a fabricated placeholder"
 );
 
 // 7. Twilio Telephony & TwiML Generator Tests
@@ -161,17 +174,13 @@ assert(
   "Twilio Triage Result generates emergency audio guidance and clean hangup"
 );
 
-testDispatch().then(async () => {
-  const callResult = await triggerOutboundTriageCall({
-    toPhoneNumber: "+254712345678",
-    patientId: "1",
-    patientName: "Wanjiku Muthoni",
-    language: "sw",
-  });
-  assert(
-    callResult.success && Boolean(callResult.callSid),
-    "Twilio Outbound Caller queues automated triage call"
-  );
+triggerOutboundTriageCall({
+  toPhoneNumber: "+254712345678",
+  patientId: "1",
+  patientName: "Wanjiku Muthoni",
+  language: "sw",
+}).then((callResult) => {
+  assert(callResult.success && Boolean(callResult.callSid), "Twilio Outbound Caller queues the biweekly check-in call");
 
   console.log(`\n========================================`);
   console.log(`✨ TEST RESULTS: ${testsPassed} Passed, ${testsFailed} Failed`);

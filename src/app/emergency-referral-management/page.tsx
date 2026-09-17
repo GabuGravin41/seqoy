@@ -30,15 +30,8 @@ export default function EmergencyReferralManagementPage() {
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/40'
             }`}
           >
-            <Icon name="TruckIcon" size={16} variant="outline" />
-            Active Ambulance Pipeline
-            <span
-              className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                activeTab === 'pipeline' ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-accent text-white'
-              }`}
-            >
-              1 In-Transit
-            </span>
+            <Icon name="ArrowsRightLeftIcon" size={16} variant="outline" />
+            Active Referral Pipeline
           </button>
 
           <button

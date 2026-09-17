@@ -9,12 +9,12 @@ import CapacityPageHeader from '@/components/capacity/CapacityPageHeader';
 import CapacityBentoGrid from '@/components/capacity/CapacityBentoGrid';
 import CapacityTrendChart from '@/components/capacity/CapacityTrendChart';
 import BloodBankHeatmap from '@/components/capacity/BloodBankHeatmap';
-import { useAuth } from '@/context/AuthContext';
+import { useCurrentUser } from '@/context/AuthContext';
 
 type TabType = 'capacity' | 'blood' | 'trends';
 
 export default function HospitalCapacityNetworkPage() {
-  const { currentUser } = useAuth();
+  const currentUser = useCurrentUser();
   const [activeTab, setActiveTab] = useState<TabType>(() =>
     currentUser.role === 'BLOOD_BANK_OFFICER' ? 'blood' : 'capacity'
   );
@@ -44,24 +44,6 @@ export default function HospitalCapacityNetworkPage() {
               className="btn-primary text-xs shrink-0 py-1.5 px-3 flex items-center gap-1.5"
             >
               <span>Go to Patient Triage & Transfers</span>
-              <Icon name="ArrowRightIcon" size={14} variant="outline" />
-            </Link>
-          </div>
-        )}
-
-        {currentUser.role === 'AMBULANCE_PARAMEDIC' && (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2.5 text-amber-300">
-              <Icon name="TruckIcon" size={18} variant="outline" className="shrink-0" />
-              <span>
-                <strong>Paramedic Dispatch Active:</strong> You have active ambulance runs in transit. Update vitals and transmit pre-arrival data directly to hospital triage.
-              </span>
-            </div>
-            <Link
-              href="/emergency-referral-management"
-              className="btn-primary text-xs shrink-0 py-1.5 px-3 flex items-center gap-1.5"
-            >
-              <span>Open Ambulance Dispatch Radar</span>
               <Icon name="ArrowRightIcon" size={14} variant="outline" />
             </Link>
           </div>

@@ -1,121 +1,72 @@
 /**
- * SEQOY HIMS & National Health Stack Integration Adapters
- * Non-disruptive middleware connectors for existing hospital software in Kenya
+ * SEQOY Delay-3 facility readiness integration.
+ *
+ * There is no live connection to any named hospital EHR vendor yet — that
+ * requires an actual data-sharing agreement per facility. What this module
+ * provides is the real, working mechanism a facility's EHR/HIMS can push
+ * bed/theatre updates through (an HL7 FHIR-shaped webhook), plus the honest
+ * fallback every facility has from day one: a manual update screen a bed
+ * manager uses directly. Per-facility sync status (HospitalCapacity.syncMode)
+ * reflects which one is actually in use — never a blanket "connected" claim.
  */
 
-export interface ConnectedSystem {
-  id: string;
-  name: string;
-  category: 'HIMS_EHR' | 'SMART_TRIAGE' | 'NATIONAL_SURVEILLANCE' | 'BLOOD_BANK';
-  vendor: string;
-  protocol: 'HL7_FHIR_R4' | 'OPENMRS_REST' | 'DHIS2_REST' | 'WEBHOOK_JSON';
-  status: 'CONNECTED' | 'SYNCING' | 'CONFIGURED';
-  lastSync: string;
-  activeFacilitiesCount: number;
-  description: string;
+import * as capacitiesRepo from "@/db/repository/capacities";
+
+export interface HIMSAdmissionWebhookPayload {
+  facilityId: number;
+  eventType: "PATIENT_ADMITTED" | "PATIENT_DISCHARGED";
+  wardType: "ICU" | "HDU" | "MATERNITY";
 }
 
-export const CONNECTED_SYSTEMS: ConnectedSystem[] = [
-  {
-    id: 'kenya-emr',
-    name: 'KenyaEMR (OpenMRS)',
-    category: 'HIMS_EHR',
-    vendor: 'Palladium / MOH Kenya',
-    protocol: 'OPENMRS_REST',
-    status: 'CONNECTED',
-    lastSync: '2 mins ago',
-    activeFacilitiesCount: 14,
-    description: 'Bi-directional sync: auto-imports registered ANC mothers and pushes completed emergency referral handover summaries into openmrs_encounter tables.',
-  },
-  {
-    id: 'funsoft-hims',
-    name: 'Funsoft / AfyaKE HIMS',
-    category: 'HIMS_EHR',
-    vendor: 'Funsoft Systems Kenya',
-    protocol: 'WEBHOOK_JSON',
-    status: 'CONNECTED',
-    lastSync: 'Real-time (Active)',
-    activeFacilitiesCount: 8,
-    description: 'Zero-touch Bed Management: when hospital admission desk assigns an ICU/maternity bed in Funsoft, SEQOY auto-decrements available capacity via webhook.',
-  },
-  {
-    id: 'smart-triage',
-    name: 'Smart Triage & SATS (Emergency Dept)',
-    category: 'SMART_TRIAGE',
-    vendor: 'Global Health Triage / SATS',
-    protocol: 'HL7_FHIR_R4',
-    status: 'CONNECTED',
-    lastSync: '5 mins ago',
-    activeFacilitiesCount: 6,
-    description: 'Translates South African Triage Scale (SATS) color categories into SEQOY danger levels and pushes pre-arrival vitals directly to ER triage tablets.',
-  },
-  {
-    id: 'khis-dhis2',
-    name: 'Kenya Health Information System (KHIS / DHIS2)',
-    category: 'NATIONAL_SURVEILLANCE',
-    vendor: 'Ministry of Health Kenya',
-    protocol: 'DHIS2_REST',
-    status: 'CONNECTED',
-    lastSync: 'Hourly batch',
-    activeFacilitiesCount: 47,
-    description: 'Automated MOH 711 & MOH 105 reporting: maps SEQOY MPDSR 3-Delays audits directly into national reproductive health indicator datasets.',
-  },
-  {
-    id: 'damu-sasa',
-    name: 'Damu-Sasa (KNBTS Blood Bank)',
-    category: 'BLOOD_BANK',
-    vendor: 'Damu Sasa Technologies',
-    protocol: 'WEBHOOK_JSON',
-    status: 'CONNECTED',
-    lastSync: '10 mins ago',
-    activeFacilitiesCount: 12,
-    description: 'Continuous inventory sync of ABO/Rh-D blood units across Nairobi region satellite banks to eliminate blind transfusions during postpartum hemorrhage.',
-  },
-];
-
 /**
- * Parses incoming HIMS Admission/Discharge Webhook
- * to automatically update bed capacity with zero human data entry.
+ * Applies a hospital's admission/discharge webhook to the live capacity
+ * board — this actually decrements/increments the bed count referring
+ * clinics see, not just a description of what would happen.
  */
-export function handleHIMSAdmissionWebhook(payload: {
-  facilityMflCode: string;
-  eventType: 'PATIENT_ADMITTED' | 'PATIENT_DISCHARGED';
-  wardType: 'ICU' | 'HDU' | 'MATERNITY';
-  patientId: string;
-}) {
-  const delta = payload.eventType === 'PATIENT_ADMITTED' ? -1 : 1;
+export async function handleHIMSAdmissionWebhook(payload: HIMSAdmissionWebhookPayload) {
+  const delta = payload.eventType === "PATIENT_ADMITTED" ? -1 : 1;
+  const capacity = await capacitiesRepo.adjustBed(payload.facilityId, payload.wardType, delta);
+
+  if (!capacity) {
+    return {
+      success: false,
+      message: `No capacity record found for facility ${payload.facilityId}`,
+    };
+  }
+
   return {
     success: true,
-    message: `Processed ${payload.eventType} for ${payload.wardType} ward. Capacity adjusted by ${delta}.`,
-    facilityMflCode: payload.facilityMflCode,
+    message: `${payload.eventType} applied to ${payload.wardType} ward.`,
+    facilityId: payload.facilityId,
     ward: payload.wardType,
     delta,
+    capacity,
     processedAt: new Date().toISOString(),
   };
 }
 
 /**
- * Generates DHIS2 / KHIS2 DataValueSets JSON Payload
- * for automated MoH compliance export.
+ * Generates a DHIS2 / KHIS2 DataValueSets payload shape for MoH reporting.
+ * This is a data transformer only — actually submitting it requires a real
+ * KHIS2 org-unit account and API credentials, which is a partnership/business
+ * step, not something this function claims to have already done.
  */
 export function generateKHIS2Payload(report: {
   orgUnitMfl: string;
   period: string; // e.g. "202608"
-  maternalAuditsCount: number;
-  delay1Count: number;
-  delay2Count: number;
-  delay3Count: number;
+  auditsCount: number;
+  delay1IdentifiedCount: number;
+  delay3IdentifiedCount: number;
 }) {
   return {
-    dataSet: 'MOH_711_RH_SURVEILLANCE',
-    completeDate: new Date().toISOString().split('T')[0],
+    dataSet: "MOH_711_RH_SURVEILLANCE",
+    completeDate: new Date().toISOString().split("T")[0],
     orgUnit: report.orgUnitMfl,
     period: report.period,
     dataValues: [
-      { dataElement: 'MOH711_MPDSR_TOTAL_AUDITED', value: String(report.maternalAuditsCount) },
-      { dataElement: 'MOH711_MPDSR_DELAY1_DECISION', value: String(report.delay1Count) },
-      { dataElement: 'MOH711_MPDSR_DELAY2_TRANSPORT', value: String(report.delay2Count) },
-      { dataElement: 'MOH711_MPDSR_DELAY3_QUALITY_CARE', value: String(report.delay3Count) },
+      { dataElement: "MOH711_MPDSR_TOTAL_AUDITED", value: String(report.auditsCount) },
+      { dataElement: "MOH711_MPDSR_DELAY1_DECISION", value: String(report.delay1IdentifiedCount) },
+      { dataElement: "MOH711_MPDSR_DELAY3_QUALITY_CARE", value: String(report.delay3IdentifiedCount) },
     ],
   };
 }

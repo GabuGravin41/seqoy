@@ -9,39 +9,42 @@ const delays = [
     bg: 'bg-lilac/70',
     chip: 'text-brand',
     title: 'The Decision to Seek Care',
-    body: 'Early danger signs — puffy face, severe headache, spot bleeding — are dismissed until seizures or shock begin. SEQOY reaches mothers first: weekly Swahili Voice AI calls and offline USSD *384*99# — no smartphone or data needed.',
+    body: 'Early danger signs — puffy face, severe headache, spot bleeding — are dismissed until seizures or shock begin. SEQOY reaches every enrolled mother first: an automatic call every 2 weeks (her choice of day and time), plus a weekly WhatsApp or SMS check-in — whichever she actually has.',
+    solved: true,
   },
   {
     n: '02',
     bg: 'bg-mint/70',
     chip: 'text-emerald-soft',
     title: 'Reaching the Facility',
-    body: 'Ambulances no longer drive blind. One match finds the nearest facility with a verified-open theatre, an ICU bed, and 2 units of compatible blood — with live GPS routing and ETA.',
+    body: "Transport and ambulance coordination is a real problem — and a different one, owned by EMS and county transport systems. SEQOY doesn't touch it, by design: we focus where software actually moves the needle.",
+    solved: false,
   },
   {
     n: '03',
     bg: 'bg-peach/70',
     chip: 'text-rose-soft',
     title: 'Receiving Quality Care',
-    body: 'The hospital is alerted 20–30 minutes out. The team is scrubbed, blood is cross-matched, and the ICU bed is locked in before wheels touch the ground.',
+    body: "Clinics stop referring blind. Before a referral is sent, the receiving hospital's own live bed, theatre, and blood numbers are checked — synced automatically from their EHR, or updated in 10 seconds by hand if they don't have one yet.",
+    solved: true,
   },
 ];
 
 const cadres = [
   {
     title: 'Clinic Midwives',
-    body: 'Triage walking-in mothers, compute 0–10 danger scores, and initiate immediate referral handovers.',
+    body: 'Enrol mothers, set their check-in schedule, and review danger-sign check-ins as they come in.',
     href: '/patient-risk-monitoring',
   },
   {
     title: 'Bed & Theatre Managers',
-    body: 'Receive pre-arrival telemetry — ETA, vitals, blood units — and lock beds before the ambulance arrives.',
+    body: 'Keep live ICU/HDU and theatre readiness accurate — automatically via EHR webhook, or with a 10-second manual update.',
     href: '/capacity',
   },
   {
-    title: 'Ambulance Medics',
-    body: 'Live GPS routing to the confirmed capable facility, with in-transit vitals logging en route.',
-    href: '/emergency-referral-management',
+    title: 'Community Health Promoters',
+    body: 'Follow up mothers who missed a scheduled check-in and help them pick a call time that actually works.',
+    href: '/mothers',
   },
   {
     title: 'Blood Bank Officers',
@@ -50,16 +53,16 @@ const cadres = [
   },
   {
     title: 'County Directors',
-    body: 'Automated MoH 711 & 105 maternal mortality audits and bottleneck heatmaps.',
+    body: 'Automated MoH 711 & 105 maternal mortality audits, scoped to the two delays this network actually moves.',
     href: '/surveillance',
   },
 ];
 
 const trustStats = [
-  { value: '100%', label: 'Free offline access for mothers', bg: 'bg-lilac/70', color: 'text-brand' },
-  { value: '0', label: 'New systems to type into', bg: 'bg-mint/70', color: 'text-emerald-soft' },
-  { value: '60', label: 'Min pre-arrival alert window', bg: 'bg-butter/70', color: 'text-amber-soft' },
-  { value: '3', label: 'Delays eliminated end-to-end', bg: 'bg-blush/70', color: 'text-rose-soft' },
+  { value: '2', label: 'Channels reach every mother — call + WhatsApp/SMS', bg: 'bg-lilac/70', color: 'text-brand' },
+  { value: '0', label: 'New systems for clinics to type into', bg: 'bg-mint/70', color: 'text-emerald-soft' },
+  { value: '14d', label: 'Default call cadence, fully adjustable per mother', bg: 'bg-butter/70', color: 'text-amber-soft' },
+  { value: '2', label: 'Delays this product actually solves', bg: 'bg-blush/70', color: 'text-rose-soft' },
 ];
 
 export default function LandingPage() {
@@ -109,15 +112,15 @@ export default function LandingPage() {
           <div className="lg:col-span-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/60 px-3 py-1.5 text-xs font-semibold text-ink-soft backdrop-blur-md">
               <span className="size-2 animate-pulse rounded-full bg-emerald-soft" />
-              Network LIVE · 47 facilities connected
+              Two delays. Every mother reachable. No new system to learn.
             </div>
             <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.02] tracking-tight text-balance md:text-[3.4rem]">
-              The Zero-Blindness Maternal Emergency Referral &amp; Hospital Capacity Network.
+              Catch danger signs early. Stop referring mothers to hospitals that are already full.
             </h1>
             <p className="mt-5 max-w-xl text-lg leading-relaxed text-ink-soft">
-              When a mother develops an obstetric emergency — eclampsia, hemorrhage, obstructed labor — rural clinics no
-              longer guess. SEQOY matches her to a verified open surgical theatre, an empty ICU bed, and matching blood —
-              before the ambulance leaves.
+              SEQOY calls every enrolled mother every two weeks and checks in weekly by WhatsApp or SMS — whichever she
+              has — so danger signs surface before they become emergencies. And when a clinic does need to refer her,
+              it sees the receiving hospital's real bed, theatre, and blood numbers first, instead of guessing.
             </p>
             <div className="mt-7 flex flex-wrap gap-3">
               <a
@@ -149,7 +152,7 @@ export default function LandingPage() {
                 </span>
                 <span>
                   <span className="block text-sm font-bold leading-none">4 units ready</span>
-                  <span className="mt-1 block text-[11px] text-ink-soft">KNBTS satellite · synced 8 min ago</span>
+                  <span className="mt-1 block text-[11px] text-ink-soft">Facility blood bank · synced 8 min ago</span>
                 </span>
               </div>
 
@@ -157,8 +160,8 @@ export default function LandingPage() {
               <div className="rounded-[2rem] border border-white/80 bg-white/55 p-5 shadow-2xl shadow-ink/10 backdrop-blur-xl">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-bold">Incoming Referral Pipeline</p>
-                    <p className="text-[11px] text-ink-soft">Sorted by maternal danger score</p>
+                    <p className="text-sm font-bold">Mother Check-in Queue</p>
+                    <p className="text-[11px] text-ink-soft">Sorted by danger score from calls & WhatsApp/SMS</p>
                   </div>
                   <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
                     <span className="size-1.5 animate-pulse rounded-full bg-emerald-soft" />
@@ -172,7 +175,7 @@ export default function LandingPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">Amina H. · 34 wks</p>
-                      <p className="truncate text-[11px] text-ink-soft">Eclampsia · BP 168/112 → Pumwani ETA 14m</p>
+                      <p className="truncate text-[11px] text-ink-soft">Eclampsia signs · BP 168/112 → Pumwani (capacity confirmed)</p>
                     </div>
                     <span className="rounded-full bg-rose-soft px-2 py-1 text-[10px] font-bold text-white">CRITICAL</span>
                   </div>
@@ -182,7 +185,7 @@ export default function LandingPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">Faith W. · 38 wks</p>
-                      <p className="truncate text-[11px] text-ink-soft">Reduced FM · BP 130/85 → walk-in triage</p>
+                      <p className="truncate text-[11px] text-ink-soft">Reduced fetal movement (WhatsApp reply) → clinic follow-up</p>
                     </div>
                     <span className="rounded-full bg-amber-soft px-2 py-1 text-[10px] font-bold text-white">MONITOR</span>
                   </div>
@@ -210,17 +213,26 @@ export default function LandingPage() {
         <section id="problem" className="relative z-10 mx-auto max-w-6xl px-6 pb-20">
           <div className="rounded-[2rem] border border-white/70 bg-white/45 p-8 shadow-xl shadow-ink/5 backdrop-blur-xl md:p-10">
             <div className="mb-8 text-center">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">The Three Delays We Remove</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">The Three Delays Framework</p>
               <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight md:text-3xl">
-                No mother sent to a facility that cannot save her.
+                We solve two delays completely, on purpose — not three delays halfway.
               </h2>
             </div>
             <div className="grid gap-5 md:grid-cols-3">
               {delays.map((d) => (
-                <article key={d.n} className={`rounded-3xl border border-white/70 p-6 ${d.bg}`}>
-                  <span className={`grid size-11 place-items-center rounded-2xl bg-white/80 text-sm font-bold ${d.chip}`}>
-                    {d.n}
-                  </span>
+                <article key={d.n} className={`rounded-3xl border border-white/70 p-6 ${d.bg} relative`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`grid size-11 place-items-center rounded-2xl bg-white/80 text-sm font-bold ${d.chip}`}>
+                      {d.n}
+                    </span>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                        d.solved ? 'bg-emerald-soft/90 text-white' : 'bg-white/70 text-ink-soft'
+                      }`}
+                    >
+                      {d.solved ? 'SEQOY solves this' : 'Out of scope, by design'}
+                    </span>
+                  </div>
                   <h3 className="mt-4 text-base font-bold">{d.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-ink-soft">{d.body}</p>
                 </article>
@@ -263,9 +275,10 @@ export default function LandingPage() {
                 No hallucinated triage. Your data stays sovereign.
               </h2>
               <p className="mt-4 text-sm leading-relaxed text-ink-soft">
-                SEQOY listens to your existing KenyaEMR or Funsoft and syncs capacity silently — zero new data entry.
-                Recommendations are deterministic clinical rules, aligned to WHO Antenatal Guidelines and Kenya MoH MPDSR
-                frameworks, and compliant with the Kenya Data Protection Act 2019.
+                A hospital's own EHR can push live bed and blood numbers to SEQOY automatically — or, until that
+                integration exists, a bed manager updates it in ten seconds by hand. Either way, referring clinics see
+                the real number. Triage logic is deterministic clinical rules aligned to WHO Antenatal Guidelines and
+                Kenya MoH MPDSR frameworks, built for compliance with the Kenya Data Protection Act 2019.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <span className="rounded-full bg-lilac px-3 py-1.5 text-xs font-medium text-ink-soft">WHO Antenatal Guidelines</span>
@@ -295,8 +308,8 @@ export default function LandingPage() {
                   See your county's maternal network in 30 days.
                 </h2>
                 <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70">
-                  We onboard your primary clinics, connect the EMR via a read-only bridge, and stand up the referral
-                  dispatch network — no capital outlay, no new hardware.
+                  We onboard your primary clinics and referral hospitals onto one shared capacity picture, and get
+                  every enrolled mother reachable by call and WhatsApp/SMS — no capital outlay, no new hardware.
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <a href="mailto:partners@seqoy.health" className="rounded-full bg-white px-6 py-3.5 text-sm font-bold text-ink transition hover:bg-white/90">

@@ -1,4 +1,4 @@
-import { Facility, HospitalCapacity, mockStore } from "@/db/mock-store";
+import { Facility, HospitalCapacity } from "@/db/mock-store";
 
 export interface ReferralRequirement {
   referringFacilityId: number;
@@ -48,20 +48,22 @@ export function estimateEmergencyDriveMinutes(distanceKm: number): number {
   return Math.max(8, Math.round(baseMinutes + 4)); // include 4 min dispatch mobilization
 }
 
-export function matchReferralHospitals(req: ReferralRequirement): {
+export function matchReferralHospitals(
+  req: ReferralRequirement,
+  allFacilities: Facility[],
+  allCapacities: HospitalCapacity[]
+): {
   recommendedHospital: MatchedHospital | null;
   allHospitals: MatchedHospital[];
   blindReferralRiskIdentified: boolean;
   avoidedBlindHospitalName?: string;
 } {
-  const referringFacility = mockStore.facilities.find(
-    (f) => f.id === req.referringFacilityId
-  ) || mockStore.facilities[0];
+  const referringFacility = allFacilities.find((f) => f.id === req.referringFacilityId) || allFacilities[0];
 
-  const referralFacilities = mockStore.facilities.filter((f) => f.isReferralCenter);
+  const referralFacilities = allFacilities.filter((f) => f.isReferralCenter);
 
   const matchedList: MatchedHospital[] = referralFacilities.map((facility) => {
-    const capacity = mockStore.capacities.find((c) => c.facilityId === facility.id) || {
+    const capacity = allCapacities.find((c) => c.facilityId === facility.id) || {
       id: 0,
       facilityId: facility.id,
       icuBedsTotal: 0,
@@ -76,6 +78,7 @@ export function matchReferralHospitals(req: ReferralRequirement): {
       obstetricianOnDuty: false,
       anesthesiologistOnDuty: false,
       neonatologistOnDuty: false,
+      syncMode: "MANUAL" as const,
       lastUpdated: new Date().toISOString(),
     };
 

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleUSSDSession } from "@/lib/ussd/state-machine";
-import { mockStore } from "@/db/mock-store";
 import { evaluateClinicalRisk } from "@/lib/clinical/risk-scorer";
+import * as patientsRepo from "@/db/repository/patients";
+import * as checkinsRepo from "@/db/repository/checkins";
+import { verifySharedSecretOrSession } from "@/lib/security/webhookAuth";
 
 export async function POST(req: NextRequest) {
+  if (!(await verifySharedSecretOrSession(req, "USSD_WEBHOOK_SECRET"))) {
+    return new NextResponse("END Unauthorized", { status: 401, headers: { "Content-Type": "text/plain" } });
+  }
+
   try {
     let sessionId = "";
     let serviceCode = "";
@@ -26,30 +32,29 @@ export async function POST(req: NextRequest) {
       text = body.text || "";
     }
 
-    const result = handleUSSDSession({
-      sessionId,
-      serviceCode,
-      phoneNumber,
-      text,
-    });
+    const result = handleUSSDSession({ sessionId, serviceCode, phoneNumber, text });
 
-    // If check-in is complete, save to records
-    if (result.shouldSaveCheckin && result.triageData) {
-      let patient = mockStore.patients.find((p) => p.phoneNumber === phoneNumber);
-      if (!patient) {
-        // Find by fallback or default
-        patient = mockStore.patients[0];
+    if (result.scheduleUpdate) {
+      const patient = await patientsRepo.findPatientByPhone(phoneNumber);
+      if (patient) {
+        await patientsRepo.updatePatientSchedule(patient.id, result.scheduleUpdate);
       }
+    }
 
+    // If check-in is complete, save to records — never attribute an unmatched
+    // phone number to the wrong mother; record it as needing manual review instead.
+    if (result.shouldSaveCheckin && result.triageData) {
+      const patient = await patientsRepo.findPatientByPhone(phoneNumber);
       const triage = evaluateClinicalRisk(result.triageData);
 
-      // Update patient risk status
-      patient.currentRiskLevel = triage.riskLevel;
-      patient.lastCheckinAt = new Date().toISOString();
+      if (patient) {
+        await patientsRepo.updatePatientRiskState(patient.id, triage.riskLevel);
+      }
 
-      mockStore.checkins.unshift({
-        id: mockStore.checkins.length + 1,
-        patientId: patient.id,
+      await checkinsRepo.createCheckin({
+        patientId: patient?.id ?? null,
+        reportedPhoneNumber: patient ? undefined : phoneNumber,
+        requiresPatientMatch: !patient,
         channel: "USSD",
         languageUsed: result.triageData.language,
         hasSevereHeadache: result.triageData.hasSevereHeadache,
@@ -59,21 +64,12 @@ export async function POST(req: NextRequest) {
         hasHighFever: result.triageData.hasHighFever,
         hasReducedFetalMovement: result.triageData.hasReducedFetalMovement,
         hasSevereAbdominalPain: result.triageData.hasSevereAbdominalPain,
-        riskScore: triage.riskScore,
-        riskLevel: triage.riskLevel,
-        suspectedCondition: triage.suspectedCondition,
-        flaggedForImmediateReferral: triage.flaggedForImmediateReferral,
-        createdAt: new Date().toISOString(),
+        triage,
       });
     }
 
-    // Return plain text as required by Africa's Talking / Twilio USSD gateways
-    return new NextResponse(result.response, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    });
+    // Plain text CON/END response, as required by Africa's Talking USSD gateways.
+    return new NextResponse(result.response, { status: 200, headers: { "Content-Type": "text/plain" } });
   } catch (error: any) {
     console.error("USSD Webhook error:", error);
     return new NextResponse("END Samahani, hitilafu imetokea. / System error. Please try again.", {

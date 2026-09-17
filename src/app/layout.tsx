@@ -1,11 +1,17 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import { DM_Sans, Fraunces } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { TelephonyProvider } from '@/context/TelephonyContext';
+
+// Every route here is either behind Clerk auth or reads per-request session
+// state — there's no benefit to statically prerendering any of it at build
+// time, and doing so requires a real Clerk key to even be present at build.
+export const dynamic = 'force-dynamic';
 
 const dmSans = DM_Sans({
   subsets: ['latin'],
@@ -27,9 +33,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'SEQOY — Zero-Blindness Maternal Emergency Referral & Hospital Capacity Network',
+  title: 'SEQOY — Early Warning & Facility Readiness for Maternal Care',
   description:
-    'SEQOY matches mothers in obstetric emergencies to hospitals with verified open theatres, ICU beds, and compatible blood — before the ambulance leaves.',
+    'SEQOY reaches every enrolled mother with automatic biweekly calls and weekly WhatsApp/SMS check-ins, and gives clinics live hospital bed and blood capacity so they never refer a mother somewhere already full.',
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },
@@ -57,23 +63,32 @@ export default function RootLayout({
         />
       </head>
       <body className={`${dmSans.className} min-h-screen bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground`}>
-        <ThemeProvider>
-          <AuthProvider>
-            <TelephonyProvider>
-              {children}
-              <Toaster
-                position="bottom-right"
-                toastOptions={{
-                  style: {
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    color: 'var(--foreground)',
-                  },
-                }}
-              />
-            </TelephonyProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <ClerkProvider
+          appearance={{
+            variables: {
+              colorPrimary: '#0f766e',
+              borderRadius: '0.75rem',
+            },
+          }}
+        >
+          <ThemeProvider>
+            <AuthProvider>
+              <TelephonyProvider>
+                {children}
+                <Toaster
+                  position="bottom-right"
+                  toastOptions={{
+                    style: {
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--foreground)',
+                    },
+                  }}
+                />
+              </TelephonyProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

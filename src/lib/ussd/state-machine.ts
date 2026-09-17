@@ -20,7 +20,34 @@ export interface USSDResponse {
     hasSevereAbdominalPain: boolean;
     language: string;
   };
+  /** Delay 1: the mother picked her own call day/time via the USSD menu. */
+  scheduleUpdate?: {
+    preferredCheckinDayOfWeek: number; // 0=Sun ... 6=Sat
+    preferredCheckinHour: number;
+  };
 }
+
+const DAY_OPTIONS_SWAHILI = [
+  { key: "1", label: "Jumatatu", dayOfWeek: 1 },
+  { key: "2", label: "Jumanne", dayOfWeek: 2 },
+  { key: "3", label: "Jumatano", dayOfWeek: 3 },
+  { key: "4", label: "Alhamisi", dayOfWeek: 4 },
+  { key: "5", label: "Ijumaa", dayOfWeek: 5 },
+  { key: "6", label: "Jumamosi", dayOfWeek: 6 },
+  { key: "7", label: "Jumapili", dayOfWeek: 0 },
+];
+
+const DAY_OPTIONS_ENGLISH = [
+  { key: "1", label: "Monday", dayOfWeek: 1 },
+  { key: "2", label: "Tuesday", dayOfWeek: 2 },
+  { key: "3", label: "Wednesday", dayOfWeek: 3 },
+  { key: "4", label: "Thursday", dayOfWeek: 4 },
+  { key: "5", label: "Friday", dayOfWeek: 5 },
+  { key: "6", label: "Saturday", dayOfWeek: 6 },
+  { key: "7", label: "Sunday", dayOfWeek: 0 },
+];
+
+const TIME_BUCKET_HOURS: Record<string, number> = { "1": 9, "2": 14, "3": 18 };
 
 export function handleUSSDSession(params: USSDSessionParams): USSDResponse {
   const { text } = params;
@@ -69,7 +96,8 @@ Tafadhali tulia na unywe maji. Wahudumu wa afya wanakupigia simu sasa hivi. Piga
 1. Ripoti Hali Yako ya Leo (Check-in)
 2. Dalili za Hatari Wakati wa Mimba
 3. Tarehe ya Kliniki ya Wazazi
-4. Piga Simu ya Dharura`,
+4. Piga Simu ya Dharura
+5. Badilisha Siku/Muda wa Kupigiwa Simu`,
       };
     }
 
@@ -178,6 +206,34 @@ Ukihisi mabadiliko yoyote, piga *384*99# wakati wowote.`,
         response: `END Piga Namba ya Bure ya Dharura ya SEQOY: 0800-720-999 au 1199 kwa usaidizi wa haraka wa gari la wagonjwa.`,
       };
     }
+
+    if (swahiliSubChoice === "5") {
+      if (parts.length === 2) {
+        return {
+          response: `CON Chagua siku unayotaka kupigiwa simu:
+${DAY_OPTIONS_SWAHILI.map((d) => `${d.key}. ${d.label}`).join("\n")}`,
+        };
+      }
+      if (parts.length === 3) {
+        return {
+          response: `CON Chagua muda unaokufaa:
+1. Asubuhi (9AM)
+2. Mchana (2PM)
+3. Jioni (6PM)`,
+        };
+      }
+      if (parts.length === 4) {
+        const dayChoice = DAY_OPTIONS_SWAHILI.find((d) => d.key === parts[2]);
+        const hour = TIME_BUCKET_HOURS[parts[3]];
+        if (!dayChoice || hour === undefined) {
+          return { response: `END Chaguo si sahihi. Piga *384*99# kuanza tena.` };
+        }
+        return {
+          response: `END Umefanikiwa! Sasa utapigiwa simu kila ${dayChoice.label} muda wa saa uliyochagua.`,
+          scheduleUpdate: { preferredCheckinDayOfWeek: dayChoice.dayOfWeek, preferredCheckinHour: hour },
+        };
+      }
+    }
   }
 
   // --- ENGLISH FLOW (Choice 2) ---
@@ -188,7 +244,8 @@ Ukihisi mabadiliko yoyote, piga *384*99# wakati wowote.`,
 1. How Are You Feeling Today? (Check-in)
 2. Warning & Danger Signs
 3. Next Pregnancy Clinic Visit
-4. Call for Emergency Help`,
+4. Call for Emergency Help
+5. Change My Call Day/Time`,
       };
     }
 
@@ -292,6 +349,34 @@ If you feel unwell before then, dial *384*99# anytime.`,
       return {
         response: `END Call SEQOY Free Emergency Toll-Free: 0800-720-999 or 1199 for free ambulance dispatch assistance.`,
       };
+    }
+
+    if (engSubChoice === "5") {
+      if (parts.length === 2) {
+        return {
+          response: `CON Choose the day you want to be called:
+${DAY_OPTIONS_ENGLISH.map((d) => `${d.key}. ${d.label}`).join("\n")}`,
+        };
+      }
+      if (parts.length === 3) {
+        return {
+          response: `CON Choose a time that works for you:
+1. Morning (9AM)
+2. Afternoon (2PM)
+3. Evening (6PM)`,
+        };
+      }
+      if (parts.length === 4) {
+        const dayChoice = DAY_OPTIONS_ENGLISH.find((d) => d.key === parts[2]);
+        const hour = TIME_BUCKET_HOURS[parts[3]];
+        if (!dayChoice || hour === undefined) {
+          return { response: `END Invalid selection. Dial *384*99# to start again.` };
+        }
+        return {
+          response: `END Done! You will now be called every ${dayChoice.label} at your chosen time.`,
+          scheduleUpdate: { preferredCheckinDayOfWeek: dayChoice.dayOfWeek, preferredCheckinHour: hour },
+        };
+      }
     }
   }
 

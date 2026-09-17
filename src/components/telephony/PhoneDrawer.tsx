@@ -294,7 +294,7 @@ export default function PhoneDrawer() {
                 >
                   <span className="font-bold text-accent block">⚡ Emergency SOS Panic Button</span>
                   <span className="text-[11px] text-muted-foreground block">
-                    Direct SOS trigger dispatches clinic ambulance
+                    Direct SOS trigger alerts the clinic immediately
                   </span>
                 </button>
               </div>

@@ -2,7 +2,7 @@ import React from 'react';
 
 type TriageLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
 type CapacityStatus = 'AVAILABLE' | 'LIMITED' | 'FULL' | 'OFFLINE';
-type ReferralStatus = 'DISPATCHED' | 'IN_TRANSIT' | 'ARRIVED' | 'COMPLETED' | 'FAILED' | 'DRAFT';
+type ReferralStatus = 'REQUESTED' | 'ACKNOWLEDGED' | 'ACCEPTED' | 'ADMITTED' | 'COMPLETED' | 'DECLINED' | 'DRAFT';
 
 type BadgeVariant =
   | TriageLevel
@@ -29,11 +29,12 @@ const variantMap: Record<BadgeVariant, { bg: string; text: string; dot: string }
   LIMITED: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
   FULL: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
   OFFLINE: { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
-  DISPATCHED: { bg: 'bg-info/15', text: 'text-info', dot: 'bg-info' },
-  IN_TRANSIT: { bg: 'bg-high/15', text: 'text-high', dot: 'bg-high' },
-  ARRIVED: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
+  REQUESTED: { bg: 'bg-info/15', text: 'text-info', dot: 'bg-info' },
+  ACKNOWLEDGED: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
+  ACCEPTED: { bg: 'bg-primary/15', text: 'text-primary', dot: 'bg-primary' },
+  ADMITTED: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
   COMPLETED: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  FAILED: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
+  DECLINED: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
   DRAFT: { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
   ACTIVE: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
   INACTIVE: { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },

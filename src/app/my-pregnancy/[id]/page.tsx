@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
-import { initialPatients } from '@/db/mock-store';
 import { toast } from 'sonner';
 
 interface Message {
@@ -13,24 +12,59 @@ interface Message {
   isDanger?: boolean;
 }
 
+interface MotherProfile {
+  fullName: string;
+  phoneNumber: string;
+  bloodType: string;
+  gestationalWeeks: number;
+  estimatedDeliveryDate: string;
+  checkinFrequencyDays: number;
+  preferredCheckinDayOfWeek: number;
+  preferredCheckinHour: number;
+}
+
+const DAY_NAMES_SW = ['Jumapili', 'Jumatatu', 'Jumanne', 'Jumatano', 'Alhamisi', 'Ijumaa', 'Jumamosi'];
+const DAY_NAMES_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 export default function MotherPassPage() {
   const params = useParams();
   const patientId = params.id ? parseInt(params.id as string) : 1;
-  const mother = initialPatients.find((p) => p.id === patientId) || initialPatients[0];
 
+  const [mother, setMother] = useState<MotherProfile | null>(null);
   const [language, setLanguage] = useState<'SWAHILI' | 'ENGLISH'>('SWAHILI');
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      text:
-        language === 'SWAHILI'
-          ? `Habari Mama ${mother.fullName.split(' ')[0]}! Jina langu ni Daktari AI kutoka SEQOY. Unaendeleaje leo? Ikiwa unahisi dalili yoyote au unahitaji ushauri kuhusu mimba yako, niambie hapa chini au bonyeza dalili zilizo hapa chini.`
-          : `Hello Mama ${mother.fullName.split(' ')[0]}! I am Daktari AI from SEQOY. How are you feeling today? If you are experiencing any symptoms or need pregnancy advice, type below or tap one of the common signs.`,
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [hasDangerFlag, setHasDangerFlag] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/patients/${patientId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setMother(data?.patient ?? null))
+      .catch(() => setMother(null));
+  }, [patientId]);
+
+  useEffect(() => {
+    if (!mother || messages.length > 0) return;
+    const firstName = mother.fullName.split(' ')[0];
+    setMessages([
+      {
+        role: 'assistant',
+        text:
+          language === 'SWAHILI'
+            ? `Habari Mama ${firstName}! Jina langu ni Daktari AI kutoka SEQOY. Unaendeleaje leo? Ikiwa unahisi dalili yoyote au unahitaji ushauri kuhusu mimba yako, niambie hapa chini au bonyeza dalili zilizo hapa chini.`
+            : `Hello Mama ${firstName}! I am Daktari AI from SEQOY. How are you feeling today? If you are experiencing any symptoms or need pregnancy advice, type below or tap one of the common signs.`,
+      },
+    ]);
+  }, [mother, language, messages.length]);
+
+  if (!mother) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center text-sm">
+        Loading Mother Pass...
+      </div>
+    );
+  }
 
   const quickSymptoms =
     language === 'SWAHILI'
@@ -82,15 +116,15 @@ export default function MotherPassPage() {
         setHasDangerFlag(true);
         reply =
           language === 'SWAHILI'
-            ? '⚠️ Pole sana Mama! Maumivu makali ya kichwa pamoja na ukungu machoni au miguu kuvimba ni dalili za hatari za Shinikizo la Juu la Damu (Preeclampsia). Tafadhali usisubiri! Nenda kwenye kituo cha afya kilicho karibu haraka sana, au bonyeza kitufe chekundu cha dharura hapa chini kupata msaada wa gari la wagonjwa.'
-            : '⚠️ Attention Mama! Severe headache with visual changes or sudden swelling are critical warning signs of Preeclampsia (high blood pressure). Please do not wait! Go to your nearest health centre immediately or tap the red emergency button below for ambulance transport.';
+            ? '⚠️ Pole sana Mama! Maumivu makali ya kichwa pamoja na ukungu machoni au miguu kuvimba ni dalili za hatari za Shinikizo la Juu la Damu (Preeclampsia). Tafadhali usisubiri! Nenda kwenye kituo cha afya kilicho karibu haraka sana, au bonyeza kitufe chekundu cha dharura hapa chini kuwasiliana na kliniki yako.'
+            : '⚠️ Attention Mama! Severe headache with visual changes or sudden swelling are critical warning signs of Preeclampsia (high blood pressure). Please do not wait! Go to your nearest health centre immediately or tap the red emergency button below to reach your clinic.';
       } else if (isBleeding) {
         danger = true;
         setHasDangerFlag(true);
         reply =
           language === 'SWAHILI'
-            ? '⚠️ Kutoka damu wakati wowote wa ujauzito ni dharura inayohitaji uchunguzi wa daktari mara moja. Tafadhali lala chini kwa utulivu na piga simu ya dharura ya ambulance mara moja.'
-            : '⚠️ Vaginal bleeding during pregnancy is a medical emergency that requires prompt evaluation. Please lie down and call the emergency ambulance hotline immediately.';
+            ? '⚠️ Kutoka damu wakati wowote wa ujauzito ni dharura inayohitaji uchunguzi wa daktari mara moja. Tafadhali lala chini kwa utulivu na piga simu ya dharura ya kliniki mara moja.'
+            : '⚠️ Vaginal bleeding during pregnancy is a medical emergency that requires prompt evaluation. Please lie down and call your clinic emergency line immediately.';
       } else if (isReducedFetal) {
         danger = true;
         setHasDangerFlag(true);
@@ -216,7 +250,7 @@ export default function MotherPassPage() {
             <p className="text-[11px] text-slate-200">
               {language === 'SWAHILI'
                 ? 'Dalili zako zimeashiria hatari ya Preeclampsia. Bonyeza kitufe chekundu mara moja kuwasiliana na huduma ya dharura.'
-                : 'Your symptoms match urgent criteria for Preeclampsia. Tap the emergency ambulance button below immediately.'}
+                : 'Your symptoms match urgent criteria for Preeclampsia. Tap the emergency button below immediately.'}
             </p>
           </div>
         )}
@@ -232,7 +266,7 @@ export default function MotherPassPage() {
             }`}
           >
             <Icon name="PhoneIcon" size={16} variant="solid" />
-            <span>{language === 'SWAHILI' ? 'Simu ya Dharura (Ambulance)' : 'Call Ambulance Hotline'}</span>
+            <span>{language === 'SWAHILI' ? 'Simu ya Dharura ya Kliniki' : 'Call Clinic Emergency Line'}</span>
           </button>
 
           <button
@@ -318,13 +352,31 @@ export default function MotherPassPage() {
           </div>
         </div>
 
-        {/* Telephony Schedule Footnote */}
+        {/* Telephony Schedule Footnote — reflects this mother's actual configured schedule */}
         <div className="text-center pt-2 border-t border-slate-800/80">
           <p className="text-[11px] text-slate-400">
-            📞 Simu yako ya kila Jumamosi itapigwa saa <strong className="text-teal-400">2:00 Alasiri (14:00 EAT)</strong>.
+            {language === 'SWAHILI' ? (
+              <>
+                📞 Simu yako ijayo itapigwa kila{' '}
+                <strong className="text-teal-400">
+                  {DAY_NAMES_SW[mother.preferredCheckinDayOfWeek]} saa {mother.preferredCheckinHour}:00
+                </strong>
+                , kila baada ya siku {mother.checkinFrequencyDays}.
+              </>
+            ) : (
+              <>
+                📞 Your next call is scheduled every{' '}
+                <strong className="text-teal-400">
+                  {DAY_NAMES_EN[mother.preferredCheckinDayOfWeek]} at {mother.preferredCheckinHour}:00
+                </strong>
+                , every {mother.checkinFrequencyDays} days.
+              </>
+            )}
           </p>
           <p className="text-[10px] text-slate-500 mt-0.5">
-            Unaweza kupiga <strong>*384*99#</strong> bila malipo wakati wowote kwa simu yoyote ya kawaida (Kabambe).
+            {language === 'SWAHILI'
+              ? 'Unaweza kubadilisha siku/muda kupitia menyu ya *384*99# (chagua "Badilisha Siku/Muda").'
+              : 'You can change your day/time anytime by dialing *384*99# and choosing "Change My Call Day/Time".'}
           </p>
         </div>
       </div>

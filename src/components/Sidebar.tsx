@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import AppLogo from '@/components/ui/AppLogo';
 import Icon from '@/components/ui/AppIcon';
 import { useTelephony } from '@/context/TelephonyContext';
-import { useAuth, UserRole } from '@/context/AuthContext';
+import { useCurrentUser, UserRole } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 
 interface NavItem {
@@ -45,12 +45,12 @@ const navGroups: NavGroup[] = [
         roles: ['CLINIC_NURSE', 'SYSTEM_ADMIN'],
       },
       {
-        label: 'Emergency Referrals',
+        label: 'Facility Referrals',
         href: '/emergency-referral-management',
-        icon: 'TruckIcon',
+        icon: 'ArrowsRightLeftIcon',
         badge: 3,
         badgeVariant: 'warning',
-        roles: ['CLINIC_NURSE', 'BED_MANAGER', 'AMBULANCE_PARAMEDIC', 'COUNTY_DIRECTOR', 'SYSTEM_ADMIN'],
+        roles: ['CLINIC_NURSE', 'BED_MANAGER', 'COUNTY_DIRECTOR', 'SYSTEM_ADMIN'],
       },
       {
         label: 'Community Mothers',
@@ -90,7 +90,7 @@ const navGroups: NavGroup[] = [
         label: 'Referral Facilities',
         href: '/facilities',
         icon: 'BuildingOfficeIcon',
-        roles: ['BED_MANAGER', 'BLOOD_BANK_OFFICER', 'COUNTY_DIRECTOR', 'AMBULANCE_PARAMEDIC', 'SYSTEM_ADMIN'],
+        roles: ['BED_MANAGER', 'BLOOD_BANK_OFFICER', 'COUNTY_DIRECTOR', 'SYSTEM_ADMIN'],
       },
       {
         label: 'Primary Clinics',
@@ -110,6 +110,12 @@ const navGroups: NavGroup[] = [
         icon: 'CommandLineIcon',
         roles: ['SYSTEM_ADMIN'],
       },
+      {
+        label: 'Manage Staff Roles',
+        href: '/admin/users',
+        icon: 'UserGroupIcon',
+        roles: ['SYSTEM_ADMIN'],
+      },
     ],
   },
 ];
@@ -125,7 +131,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const { openDrawer } = useTelephony();
-  const { currentUser } = useAuth();
+  const currentUser = useCurrentUser();
   const { theme, toggleTheme } = useTheme();
 
   // Filter groups according to current role permissions

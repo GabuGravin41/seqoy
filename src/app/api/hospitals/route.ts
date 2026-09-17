@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mockStore } from "@/db/mock-store";
+import * as facilitiesRepo from "@/db/repository/facilities";
+import { requirePermission } from "@/lib/rbac/server";
 
 export async function GET(req: NextRequest) {
+  const auth = await requirePermission("canViewCapacity");
+  if (!auth.ok) return auth.response;
+
   const { searchParams } = new URL(req.url);
   const referralOnly = searchParams.get("referralOnly") === "true";
-  const county = searchParams.get("county");
+  const county = searchParams.get("county") ?? undefined;
 
-  let list = mockStore.facilities;
-
-  if (referralOnly) {
-    list = list.filter((f) => f.isReferralCenter);
-  }
-
-  if (county) {
-    list = list.filter((f) => f.county.toLowerCase() === county.toLowerCase());
-  }
-
-  return NextResponse.json({
-    total: list.length,
-    facilities: list,
-  });
+  const facilities = await facilitiesRepo.listFacilities({ referralOnly, county });
+  return NextResponse.json({ total: facilities.length, facilities });
 }

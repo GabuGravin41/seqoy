@@ -1,84 +1,87 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { evaluateClinicalRisk } from '@/lib/clinical/risk-scorer';
-import { parseVoiceTranscription } from '@/lib/voice/ai-agent';
-
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from "next/server";
+import { extractSymptomsFromTranscript } from "@/lib/ai/extractSymptoms";
+import * as patientsRepo from "@/db/repository/patients";
+import * as checkinsRepo from "@/db/repository/checkins";
+import { verifyTwilioSignature } from "@/lib/security/webhookAuth";
 
 /**
- * WhatsApp Business Webhook (Twilio / Meta Cloud API)
- * Handles incoming WhatsApp messages from expectant mothers
+ * WhatsApp Business webhook (Twilio) — the primary Delay-1 weekly channel.
+ * Mothers reply in free text (Swahili or English); we extract danger signs
+ * and log a check-in exactly like the voice/SMS channels.
  */
 export async function POST(request: NextRequest) {
   try {
-    const contentType = request.headers.get('content-type') || '';
-    let incomingBody = '';
-    let fromNumber = '';
-    let senderProfileName = 'Mama';
+    const contentType = request.headers.get("content-type") || "";
+    let incomingBody = "";
+    let fromNumber = "";
+    let senderProfileName = "Mama";
+    let rawParams: Record<string, string> = {};
 
-    if (contentType.includes('application/x-www-form-urlencoded')) {
+    if (contentType.includes("application/x-www-form-urlencoded")) {
       const formData = await request.formData();
-      incomingBody = formData.get('Body')?.toString() || '';
-      fromNumber = formData.get('From')?.toString() || '';
-      senderProfileName = formData.get('ProfileName')?.toString() || 'Mama';
+      formData.forEach((value, key) => (rawParams[key] = String(value)));
+      incomingBody = formData.get("Body")?.toString() || "";
+      fromNumber = (formData.get("From")?.toString() || "").replace("whatsapp:", "");
+      senderProfileName = formData.get("ProfileName")?.toString() || "Mama";
     } else {
       const json = await request.json();
-      incomingBody = json?.body || json?.message?.text || '';
-      fromNumber = json?.from || '';
-      senderProfileName = json?.profileName || 'Mama';
+      incomingBody = json?.body || json?.message?.text || "";
+      fromNumber = (json?.from || "").replace("whatsapp:", "");
+      senderProfileName = json?.profileName || "Mama";
     }
 
-    const text = incomingBody.trim().toLowerCase();
+    if (!verifyTwilioSignature(request, rawParams)) {
+      return NextResponse.json({ error: "Invalid Twilio signature" }, { status: 401 });
+    }
 
-    // Swahili NLP Keyword extraction
-    const parsed = parseVoiceTranscription(text);
-    const clinicalEvaluation = evaluateClinicalRisk({
-      hasSevereHeadache: parsed.symptoms.hasSevereHeadache || text.includes('kichwa') || text.includes('headache'),
-      hasBlurredVision: parsed.symptoms.hasBlurredVision || text.includes('ukungu') || text.includes('macho') || text.includes('vision'),
-      hasSevereSwelling: parsed.symptoms.hasSevereSwelling || text.includes('uvimbe') || text.includes('miguu') || text.includes('swelling'),
-      hasVaginalBleeding: parsed.symptoms.hasVaginalBleeding || text.includes('damu') || text.includes('bleed'),
-      hasReducedFetalMovement: parsed.symptoms.hasReducedFetalMovement || text.includes('hachezi') || text.includes('movement'),
-      hasHighFever: parsed.symptoms.hasHighFever || text.includes('homa') || text.includes('fever'),
-      hasSevereAbdominalPain: parsed.symptoms.hasSevereAbdominalPain || text.includes('tumbo') || text.includes('pain'),
+    const patient = await patientsRepo.findPatientByPhone(fromNumber);
+    const language = patient?.preferredLanguage === "ENGLISH" ? "ENGLISH" : "SWAHILI";
+    const { symptoms, triage, extractedKeywords } = await extractSymptomsFromTranscript(incomingBody, language);
+
+    if (patient) {
+      await patientsRepo.updatePatientRiskState(patient.id, triage.riskLevel);
+    }
+
+    await checkinsRepo.createCheckin({
+      patientId: patient?.id ?? null,
+      reportedPhoneNumber: patient ? undefined : fromNumber,
+      requiresPatientMatch: !patient,
+      channel: "WHATSAPP",
+      languageUsed: language,
+      hasSevereHeadache: Boolean(symptoms.hasSevereHeadache),
+      hasBlurredVision: Boolean(symptoms.hasBlurredVision),
+      hasSevereSwelling: Boolean(symptoms.hasSevereSwelling),
+      hasVaginalBleeding: Boolean(symptoms.hasVaginalBleeding),
+      hasHighFever: Boolean(symptoms.hasHighFever),
+      hasReducedFetalMovement: Boolean(symptoms.hasReducedFetalMovement),
+      hasSevereAbdominalPain: Boolean(symptoms.hasSevereAbdominalPain),
+      transcript: incomingBody,
+      aiClinicalSummary: `[WhatsApp reply: ${extractedKeywords.join(", ") || "no danger signs reported"}] — ${triage.recommendedAction}`,
+      triage,
     });
 
-    let replyMessage = '';
-
-    if (clinicalEvaluation.riskLevel === 'CRITICAL_EMERGENCY') {
-      replyMessage = `🚨 *ONYO LA DHARURA (SEQOY HEALTH)* 🚨\n\n` +
-        `Habari ${senderProfileName}, dalili ulizotaja zinaonyesha dharura inayohitaji kuonwa na daktari mara moja.\n\n` +
-        `🏥 *Hatua za Haraka:*\n` +
-        `1. Nenda kwenye kituo chako cha afya (Kliniki ya Wazazi) mara moja.\n` +
-        `2. Tumearifu mkunga aliye kazini kujiandaa.\n` +
-        `3. Kama unahitaji gari la wagonjwa (Ambulance), piga simu sasa hivi kupitia nambari hii: *0711000202*.\n\n` +
-        `_Tuko pamoja nawe kwa usalama wako na mtoto._`;
-    } else if (text === '1' || text === 'sawa' || text === 'salama' || text.includes('vizuri')) {
-      replyMessage = `🌸 *SEQOY CLINIC - RIPOTI IMENAKILIWA* 🌸\n\n` +
-        `Asante sana ${senderProfileName}! Tumerekodi kuwa wewe na mtoto mko salama na afya nzuri.\n\n` +
-        `📅 *Kliniki Yako Ijayo:* Tarehe 15/09/2026\n` +
-        `💧 *Kikumbusho cha Wiki:* Kumbuka kunywa maji ya kutosha na kumeza vidonge vya IFAS (Madini ya Chuma na Asidi ya Folic).\n\n` +
-        `Ukiwa na swali au dalili yoyote kabla ya Jumamosi ijayo, tuandikie hapa au piga *384#.`;
+    let replyMessage = "";
+    if (triage.riskLevel === "CRITICAL_EMERGENCY") {
+      replyMessage =
+        language === "ENGLISH"
+          ? `URGENT: ${senderProfileName}, your symptoms need medical attention right away. Please go to your clinic now — your nurse has been notified.`
+          : `TAHADHARI: ${senderProfileName}, dalili ulizotaja zinahitaji kuonwa na daktari mara moja. Tafadhali nenda kliniki yako sasa — mkunga wako ameshaarifiwa.`;
     } else {
-      replyMessage = `🌸 *HABARI YA LEO ${senderProfileName.toUpperCase()}* 🌸\n\n` +
-        `Karibu kwenye ukaguzi wa kila wiki wa Kliniki ya Wazazi (SEQOY).\n\n` +
-        `Je, katika siku chache zilizopita umepata mojawapo ya dalili hizi?\n` +
-        `1️⃣ Maumivu makali ya kichwa au kutoona vizuri\n` +
-        `2️⃣ Uvimbe mkubwa usoni au miguuni\n` +
-        `3️⃣ Kutoka damu au maji mengi\n` +
-        `4️⃣ Mtoto kutocheza vizuri tumboni\n\n` +
-        `👉 *Jibu kwa:* \n` +
-        `• Tuma *"SALAMA"* kama huna dalili yoyote.\n` +
-        `• Au eleza kwa sauti/ujumbe dalili unayohisi ili tukusaidie mara moja.`;
+      replyMessage =
+        language === "ENGLISH"
+          ? `Thank you ${senderProfileName}, your update has been recorded. Keep taking your iron/folic acid tablets.`
+          : `Asante ${senderProfileName}, taarifa yako imepokelewa. Endelea kumeza vidonge vya madini ya chuma.`;
     }
 
     return NextResponse.json({
       success: true,
       sender: fromNumber,
-      parsedSymptoms: parsed.symptoms,
-      riskLevel: clinicalEvaluation.riskLevel,
-      replyMessage: replyMessage,
+      parsedSymptoms: symptoms,
+      riskLevel: triage.riskLevel,
+      replyMessage,
     });
   } catch (error: any) {
-    console.error('Error handling WhatsApp webhook:', error);
-    return NextResponse.json({ error: 'Internal webhook error' }, { status: 500 });
+    console.error("Error handling WhatsApp webhook:", error);
+    return NextResponse.json({ error: "Internal webhook error" }, { status: 500 });
   }
 }

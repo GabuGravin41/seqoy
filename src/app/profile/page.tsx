@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
-import { useAuth } from '@/context/AuthContext';
+import { SignOutButton } from '@clerk/nextjs';
+import { useCurrentUser } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
 
 export default function UserProfilePage() {
-  const { currentUser, switchRole, personas } = useAuth();
+  const currentUser = useCurrentUser();
   const { theme, setTheme } = useTheme();
   const [isOnDuty, setIsOnDuty] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
@@ -71,10 +71,12 @@ export default function UserProfilePage() {
               <Icon name="CheckIcon" size={14} variant="outline" />
               Save Changes
             </button>
-            <Link href="/login" className="btn-secondary text-xs text-critical hover:bg-critical/10 border-critical/30">
-              <Icon name="ArrowRightOnRectangleIcon" size={14} variant="outline" />
-              Sign Out
-            </Link>
+            <SignOutButton>
+              <button className="btn-secondary text-xs text-critical hover:bg-critical/10 border-critical/30">
+                <Icon name="ArrowRightOnRectangleIcon" size={14} variant="outline" />
+                Sign Out
+              </button>
+            </SignOutButton>
           </div>
         </div>
 
@@ -196,8 +198,8 @@ export default function UserProfilePage() {
 
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-xl">
                   <div>
-                    <p className="text-xs font-bold text-foreground">Ambulance Dispatch Audio Alarm</p>
-                    <p className="text-[11px] text-muted-foreground">Play audible siren sound in browser on incoming emergency transfers</p>
+                    <p className="text-xs font-bold text-foreground">Referral Notification Sound</p>
+                    <p className="text-[11px] text-muted-foreground">Play an audible chime in-browser when a new facility referral arrives</p>
                   </div>
                   <input
                     type="checkbox"
@@ -288,7 +290,7 @@ export default function UserProfilePage() {
                   <span className="font-semibold text-primary">Pumwani & Mama Lucy Level 5</span>
                 </div>
                 <div className="flex items-center justify-between text-xs py-1">
-                  <span className="text-muted-foreground">Sub-County Dispatch Zone</span>
+                  <span className="text-muted-foreground">Sub-County Coverage Zone</span>
                   <span className="font-semibold text-foreground">Westlands Sub-County</span>
                 </div>
               </div>
@@ -303,10 +305,6 @@ export default function UserProfilePage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
                   <span className="text-foreground">Antenatal Patient Registration</span>
-                  <span className="text-emerald-400 font-bold text-[11px]">✓ Authorized</span>
-                </div>
-                <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
-                  <span className="text-foreground">Emergency Ambulance Dispatch</span>
                   <span className="text-emerald-400 font-bold text-[11px]">✓ Authorized</span>
                 </div>
                 <div className="flex items-center justify-between p-2.5 bg-muted/20 rounded-lg text-xs">
