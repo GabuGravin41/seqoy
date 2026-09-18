@@ -9,6 +9,16 @@ import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
 
 export default function UserProfilePage() {
+  return (
+    <AppLayout>
+      <ProfilePageBody />
+    </AppLayout>
+  );
+}
+
+// useCurrentUser() throws until the profile has loaded — only safe inside
+// AppLayout's children, which is why this isn't in the page's top-level body.
+function ProfilePageBody() {
   const currentUser = useCurrentUser();
   const { theme, setTheme } = useTheme();
   const [isOnDuty, setIsOnDuty] = useState(true);
@@ -23,7 +33,6 @@ export default function UserProfilePage() {
   };
 
   return (
-    <AppLayout>
       <div className="px-6 lg:px-8 py-6 max-w-5xl mx-auto space-y-6">
         {/* Profile Banner */}
         <div className="bg-card border border-border rounded-2xl p-6 card-glow-primary flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -320,6 +329,5 @@ export default function UserProfilePage() {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 }

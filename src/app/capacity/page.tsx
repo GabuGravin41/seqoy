@@ -14,6 +14,18 @@ import { useCurrentUser } from '@/context/AuthContext';
 type TabType = 'capacity' | 'blood' | 'trends';
 
 export default function HospitalCapacityNetworkPage() {
+  return (
+    <AppLayout>
+      <CapacityPageBody />
+    </AppLayout>
+  );
+}
+
+// useCurrentUser() throws until the profile has loaded — it's only safe to
+// call from a component rendered *inside* AppLayout, which gates its children
+// on that load. Keeping it out of the page's own top-level body (which runs
+// before AppLayout gets a chance to gate anything) avoids that crash.
+function CapacityPageBody() {
   const currentUser = useCurrentUser();
   const [activeTab, setActiveTab] = useState<TabType>(() =>
     currentUser.role === 'BLOOD_BANK_OFFICER' ? 'blood' : 'capacity'
@@ -26,7 +38,6 @@ export default function HospitalCapacityNetworkPage() {
   }, [currentUser.role]);
 
   return (
-    <AppLayout>
       <div className="px-6 lg:px-8 py-6 max-w-screen-2xl mx-auto space-y-6">
         <CriticalAlertBanner />
 
@@ -159,6 +170,5 @@ export default function HospitalCapacityNetworkPage() {
           </div>
         )}
       </div>
-    </AppLayout>
   );
 }
