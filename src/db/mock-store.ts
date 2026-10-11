@@ -50,7 +50,7 @@ export interface HealthCheckin {
   patientId: number | null;
   reportedPhoneNumber?: string;
   requiresPatientMatch?: boolean;
-  channel: "VOICE_AI" | "USSD" | "SMS" | "WHATSAPP" | "IN_PERSON";
+  channel: "VOICE_AI" | "USSD" | "SMS" | "WHATSAPP" | "IN_PERSON" | "MANUAL_CALL";
   languageUsed: string;
   hasSevereHeadache: boolean;
   hasBlurredVision: boolean;

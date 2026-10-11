@@ -1,12 +1,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useTelephony } from '@/context/TelephonyContext';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
 
 export default function PhoneDrawer() {
   const { isOpen, closeDrawer, activeMode, setActiveMode, selectedPatient } = useTelephony();
+
+  // Manual Outreach State
+  const [manualLang, setManualLang] = useState<'SWAHILI' | 'ENGLISH' | 'SOMALI'>('SWAHILI');
+  const [dangerChecks, setDangerChecks] = useState({
+    headache: false,
+    blurredVision: false,
+    bleeding: false,
+    swelling: false,
+    fetalMovement: false,
+    abdominalPain: false,
+    fever: false,
+  });
+  const [manualOutcome, setManualOutcome] = useState<'SAFE' | 'DANGER' | 'UNREACHABLE'>('SAFE');
+  const [manualNotes, setManualNotes] = useState('');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [manualLoggedResult, setManualLoggedResult] = useState<any>(null);
 
   // USSD State
   const [ussdSessionId, setUssdSessionId] = useState(() => `SES-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -30,6 +47,95 @@ export default function PhoneDrawer() {
       setUssdPhone(selectedPatient.phone);
     }
   }, [selectedPatient]);
+
+  // Check if any danger sign is selected
+  const hasAnyDangerSign =
+    dangerChecks.headache ||
+    dangerChecks.blurredVision ||
+    dangerChecks.bleeding ||
+    dangerChecks.swelling ||
+    dangerChecks.fetalMovement ||
+    dangerChecks.abdominalPain ||
+    dangerChecks.fever;
+
+  // Auto-switch outcome if danger signs toggled
+  const handleToggleDanger = (key: keyof typeof dangerChecks) => {
+    setDangerChecks((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      const anyActive = Object.values(next).some(Boolean);
+      if (anyActive) {
+        setManualOutcome('DANGER');
+      } else if (manualOutcome === 'DANGER') {
+        setManualOutcome('SAFE');
+      }
+      return next;
+    });
+  };
+
+  // Submit manual call check-in
+  const handleSaveManualCheckin = async () => {
+    setManualSubmitting(true);
+    setManualLoggedResult(null);
+
+    const patientId = selectedPatient?.id || 1;
+
+    try {
+      const res = await fetch(`/api/patients/${patientId}/checkins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel: 'MANUAL_CALL',
+          languageUsed: manualLang,
+          hasSevereHeadache: dangerChecks.headache,
+          hasBlurredVision: dangerChecks.blurredVision,
+          hasSevereSwelling: dangerChecks.swelling,
+          hasVaginalBleeding: dangerChecks.bleeding,
+          hasHighFever: dangerChecks.fever,
+          hasReducedFetalMovement: dangerChecks.fetalMovement,
+          hasSevereAbdominalPain: dangerChecks.abdominalPain,
+          transcript: `Manual health worker outreach conducted in ${manualLang}. Status: ${manualOutcome}. Notes: ${manualNotes || 'Routine check'}`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to save outreach record');
+        return;
+      }
+
+      setManualLoggedResult(data);
+
+      if (data.triage?.riskLevel === 'CRITICAL_EMERGENCY' || hasAnyDangerSign) {
+        toast.error('Emergency Maternal Danger Signs Detected!', {
+          description: `Patient flagged for immediate Level 4/5 hospital referral.`,
+        });
+      } else {
+        toast.success('Manual call logged successfully', {
+          description: `Patient risk status: NORMAL. Zero toll fees used.`,
+        });
+      }
+    } catch (e: any) {
+      toast.error('Failed to log manual outreach', { description: e.message });
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
+
+  // Reset manual form
+  const handleResetManual = () => {
+    setDangerChecks({
+      headache: false,
+      blurredVision: false,
+      bleeding: false,
+      swelling: false,
+      fetalMovement: false,
+      abdominalPain: false,
+      fever: false,
+    });
+    setManualOutcome('SAFE');
+    setManualNotes('');
+    setManualLoggedResult(null);
+  };
 
   // Handle USSD Dial / Next Step
   const sendUssdStep = async (stepValue?: string) => {
@@ -60,13 +166,17 @@ export default function PhoneDrawer() {
         }),
       });
       const textResponse = await res.text();
-      // Strip technical telecom protocol prefix (CON/END) for authentic feature phone LCD display
       const cleanDisplay = textResponse.replace(/^(CON|END)\s*/i, '');
       setUssdScreenText(cleanDisplay);
 
       if (textResponse.startsWith('END')) {
         setUssdIsActive(false);
-        if (textResponse.includes('HATARI') || textResponse.includes('CRITICAL') || textResponse.includes('DHARURA') || textResponse.includes('EMERGENCY')) {
+        if (
+          textResponse.includes('HATARI') ||
+          textResponse.includes('CRITICAL') ||
+          textResponse.includes('DHARURA') ||
+          textResponse.includes('EMERGENCY')
+        ) {
           toast.error('Critical maternal danger sign recorded via USSD!', {
             description: 'Clinic midwife alerted for emergency transfer.',
           });
@@ -124,6 +234,9 @@ export default function PhoneDrawer() {
     }
   };
 
+  const patientName = selectedPatient?.name || 'Wanjiku Muthoni';
+  const gestationalWeek = selectedPatient?.gestationalWeek || 34;
+
   return (
     <>
       {/* Backdrop */}
@@ -136,27 +249,25 @@ export default function PhoneDrawer() {
 
       {/* Slide-out Panel */}
       <div
-        className={`fixed top-0 right-0 z-50 h-screen w-full sm:w-[460px] bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 z-50 h-screen w-full sm:w-[480px] bg-card border-l border-border shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         {/* Drawer Header */}
         <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
-              <Icon name="DevicePhoneMobileIcon" size={18} variant="outline" />
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+              <Icon name="PhoneIcon" size={18} variant="outline" />
             </div>
             <div>
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                Telephony Handset
-                <span className="text-[10px] bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.2 rounded font-mono">
-                  GSM 2G
+                Maternal Outreach & Triage
+                <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded font-mono">
+                  Zero-Toll Active
                 </span>
               </h3>
               <p className="text-[11px] text-muted-foreground">
-                {selectedPatient?.name
-                  ? `${selectedPatient.name} (Wk ${selectedPatient.gestationalWeek || 34})`
-                  : 'Maternal Feature Phone Simulator'}
+                {patientName} (Week {gestationalWeek}) • {ussdPhone}
               </p>
             </div>
           </div>
@@ -170,34 +281,329 @@ export default function PhoneDrawer() {
         </div>
 
         {/* Mode Selector Tabs */}
-        <div className="p-3 border-b border-border flex gap-2 bg-card">
+        <div className="p-2.5 border-b border-border flex gap-1.5 bg-card">
+          <button
+            onClick={() => setActiveMode('manual')}
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+              activeMode === 'manual'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-muted/60 text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon name="PhoneArrowUpRightIcon" size={14} variant="outline" />
+            Manual Call (Zero Cost)
+          </button>
           <button
             onClick={() => setActiveMode('ussd')}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
               activeMode === 'ussd'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'bg-muted/60 text-muted-foreground hover:text-foreground'
             }`}
           >
             <Icon name="RadioIcon" size={14} variant="outline" />
-            USSD Session (*384#)
+            USSD (*384#)
           </button>
           <button
             onClick={() => setActiveMode('voice')}
-            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+            className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
               activeMode === 'voice'
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'bg-muted/60 text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Icon name="PhoneIcon" size={14} variant="outline" />
-            Voice AI Call
+            <Icon name="CpuChipIcon" size={14} variant="outline" />
+            Voice AI
           </button>
         </div>
 
         {/* Drawer Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+          {/* ============================================================ */}
+          {/* --- MANUAL CALL OUTREACH MODE (ZERO TWILIO / HEALTHCARE FRIENDLY) --- */}
+          {/* ============================================================ */}
+          {activeMode === 'manual' && (
+            <div className="space-y-4 fade-in">
+              {/* Quick Call Action Card */}
+              <div className="bg-emerald-950/30 border border-emerald-800/50 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                      Direct Nurse / CHP Calling
+                    </span>
+                    <h4 className="text-sm font-bold text-foreground mt-0.5">{patientName}</h4>
+                    <p className="text-xs text-muted-foreground font-mono">{ussdPhone}</p>
+                  </div>
+                  <a
+                    href={`tel:${ussdPhone.replace(/\s+/g, '')}`}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-md inline-flex items-center gap-1.5 transition active:scale-95"
+                  >
+                    <Icon name="PhoneIcon" size={14} variant="solid" />
+                    Dial on Phone
+                  </a>
+                </div>
+                <p className="text-[11px] text-emerald-200/80 leading-relaxed border-t border-emerald-800/40 pt-2">
+                  💡 <strong>Zero Setup:</strong> Dials directly via your phone SIM card or facility handset. No Twilio
+                  airtime or paid toll-free numbers needed. Takes ~30 seconds.
+                </p>
+              </div>
+
+              {/* 30-Second Language Script */}
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Icon name="ChatBubbleBottomCenterTextIcon" size={14} variant="outline" className="text-primary" />
+                    Prompt Script
+                  </span>
+                  <div className="flex gap-1">
+                    {(['SWAHILI', 'ENGLISH', 'SOMALI'] as const).map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => setManualLang(l)}
+                        className={`text-[10px] px-2 py-0.5 rounded font-bold transition ${
+                          manualLang === l
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {l === 'SWAHILI' ? 'Swahili' : l === 'ENGLISH' ? 'English' : 'Somali'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-muted/40 rounded-xl p-3 text-xs text-foreground/90 italic leading-relaxed border border-border">
+                  {manualLang === 'SWAHILI' && (
+                    <p>
+                      &quot;Hujambo <strong>{patientName}</strong>, ni muuguzi kutoka kliniki. Unajisikiaje leo? Je, una
+                      maumivu makali ya kichwa, ukungu machoni, kuvuja damu, uvimbe wa uso/mikono, au mtoto kuacha kucheza?&quot;
+                    </p>
+                  )}
+                  {manualLang === 'ENGLISH' && (
+                    <p>
+                      &quot;Hello <strong>{patientName}</strong>, this is your clinic nurse. Just checking in: Are you
+                      having any severe headaches, blurry vision, bleeding, sudden face/hand swelling, or reduced baby
+                      movement?&quot;
+                    </p>
+                  )}
+                  {manualLang === 'SOMALI' && (
+                    <p>
+                      &quot;Asc <strong>{patientName}</strong>, waa kalkaalisada caafimaadka. Sidee tahay maanta? Ma
+                      leedahay madax-xanuun daran, aragga oo xumaada, dhiig-bax, barar wejiga ah, mise ilmuhu waa joojiyay
+                      dhaqdhaqaaqa?&quot;
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Rapid Danger Sign Checklist */}
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-foreground">WHO Danger Signs Checklist</span>
+                  <span className="text-[10px] text-muted-foreground">Tap to toggle</span>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    {
+                      id: 'headache',
+                      label: 'Severe Headache / Blurred Vision',
+                      subtitle: 'Maumivu makali ya kichwa / Ukungu machoni (Pre-eclampsia)',
+                    },
+                    {
+                      id: 'bleeding',
+                      label: 'Vaginal Bleeding / Fluid Gush',
+                      subtitle: 'Kuvuja damu / Maji kutoka ukeni (Hemorrhage / PROM)',
+                    },
+                    {
+                      id: 'swelling',
+                      label: 'Sudden Face or Hand Swelling',
+                      subtitle: 'Uvimbe wa uso au mikono (Edema / Eclampsia risk)',
+                    },
+                    {
+                      id: 'fetalMovement',
+                      label: 'Reduced or Absent Fetal Movement',
+                      subtitle: 'Mtoto hachezi vizuri au ametulia (Fetal distress)',
+                    },
+                    {
+                      id: 'abdominalPain',
+                      label: 'Severe Upper Abdominal Pain',
+                      subtitle: 'Maumivu makali ya mbavu au tumbo la juu',
+                    },
+                    {
+                      id: 'fever',
+                      label: 'High Fever or Chills / Foul Odor',
+                      subtitle: 'Homa kali au baridi (Sepsis / Infection)',
+                    },
+                  ].map((item) => {
+                    const active = (dangerChecks as any)[item.id];
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => handleToggleDanger(item.id as any)}
+                        className={`p-2.5 rounded-xl border cursor-pointer transition flex items-start gap-2.5 select-none ${
+                          active
+                            ? 'bg-critical/15 border-critical text-critical font-medium'
+                            : 'bg-muted/20 border-border hover:bg-muted/40 text-foreground'
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded mt-0.5 flex items-center justify-center text-white text-[10px] ${
+                            active ? 'bg-critical' : 'border border-muted-foreground/40'
+                          }`}
+                        >
+                          {active && '✓'}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold leading-snug">{item.label}</p>
+                          <p className="text-[10px] text-muted-foreground">{item.subtitle}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Call Outcome Status */}
+              <div className="bg-card border border-border rounded-2xl p-4 space-y-2.5">
+                <span className="text-xs font-bold text-foreground">Call Outcome</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setManualOutcome('SAFE');
+                      setDangerChecks({
+                        headache: false,
+                        blurredVision: false,
+                        bleeding: false,
+                        swelling: false,
+                        fetalMovement: false,
+                        abdominalPain: false,
+                        fever: false,
+                      });
+                    }}
+                    className={`p-2 rounded-xl text-center border text-xs font-bold transition ${
+                      manualOutcome === 'SAFE' && !hasAnyDangerSign
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Safe & Well
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualOutcome('DANGER')}
+                    className={`p-2 rounded-xl text-center border text-xs font-bold transition ${
+                      manualOutcome === 'DANGER' || hasAnyDangerSign
+                        ? 'bg-critical/20 border-critical text-critical'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Danger Signs!
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setManualOutcome('UNREACHABLE')}
+                    className={`p-2 rounded-xl text-center border text-xs font-bold transition ${
+                      manualOutcome === 'UNREACHABLE'
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-400'
+                        : 'bg-muted/30 border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    No Answer
+                  </button>
+                </div>
+
+                <div className="mt-2">
+                  <input
+                    type="text"
+                    value={manualNotes}
+                    onChange={(e) => setManualNotes(e.target.value)}
+                    placeholder="Short nurse note (e.g. Advised to rest, clinic visit tomorrow)"
+                    className="input-field text-xs"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    onClick={handleResetManual}
+                    type="button"
+                    className="btn-secondary text-xs px-3 py-2 flex-1"
+                  >
+                    Reset Form
+                  </button>
+                  <button
+                    onClick={handleSaveManualCheckin}
+                    disabled={manualSubmitting}
+                    type="button"
+                    className="btn-primary text-xs px-4 py-2 font-bold flex-2 flex items-center justify-center gap-1.5"
+                  >
+                    {manualSubmitting ? (
+                      <>
+                        <Icon name="ArrowPathIcon" size={14} variant="outline" className="animate-spin" />
+                        Logging...
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="ClipboardDocumentCheckIcon" size={14} variant="outline" />
+                        Save & Log Outreach
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Logged Outcome Result Banner */}
+              {manualLoggedResult && (
+                <div
+                  className={`border rounded-2xl p-4 space-y-3 fade-in ${
+                    hasAnyDangerSign || manualLoggedResult.triage?.riskLevel === 'CRITICAL_EMERGENCY'
+                      ? 'bg-critical/15 border-critical text-foreground'
+                      : 'bg-emerald-950/20 border-emerald-800 text-foreground'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold">
+                      {hasAnyDangerSign ? '⚠️ High Obstetric Risk' : '✅ Check-in Recorded Safe'}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        hasAnyDangerSign
+                          ? 'bg-critical text-white'
+                          : 'bg-emerald-500 text-white'
+                      }`}
+                    >
+                      {manualLoggedResult.triage?.riskLevel || (hasAnyDangerSign ? 'CRITICAL_EMERGENCY' : 'NORMAL')}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {manualLoggedResult.triage?.recommendedAction ||
+                      (hasAnyDangerSign
+                        ? 'Immediate transfer to a Level 4/5 hospital with blood and theatre readiness.'
+                        : 'Routine follow-up in 14 days.')}
+                  </p>
+
+                  {hasAnyDangerSign && (
+                    <div className="pt-2 border-t border-border flex justify-end">
+                      <Link
+                        href="/emergency-referral-management"
+                        onClick={closeDrawer}
+                        className="btn-primary bg-critical hover:bg-critical/90 text-white text-xs py-2 px-3.5 font-bold flex items-center gap-1.5 shadow-md"
+                      >
+                        <Icon name="ArrowsRightLeftIcon" size={14} variant="outline" />
+                        Match & Dispatch Referral Now
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ============================================================ */}
           {/* --- USSD MODE --- */}
+          {/* ============================================================ */}
           {activeMode === 'ussd' && (
             <div className="space-y-4 flex flex-col items-center">
               {/* Feature Phone Screen Frame */}
@@ -248,91 +654,47 @@ export default function PhoneDrawer() {
                           setUssdCurrentInput('*384*99#');
                         }
                       }}
-                      className="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 py-1.5 rounded-lg text-xs font-bold border border-slate-700/60 transition shadow-xs"
+                      className="bg-slate-900/80 hover:bg-slate-800 active:bg-slate-700 text-slate-200 border border-slate-800 rounded-lg py-2 text-xs font-bold transition flex items-center justify-center font-mono"
                     >
                       {key}
                     </button>
                   ))}
                 </div>
-
-                <button
-                  onClick={resetUssd}
-                  className="mt-2.5 text-[11px] text-muted-foreground hover:text-critical transition flex items-center gap-1"
-                >
-                  <Icon name="ArrowPathIcon" size={12} variant="outline" /> Reset Session
-                </button>
               </div>
 
-              {/* Quick Preset Buttons */}
-              <div className="w-full space-y-2">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
-                  Quick Simulation Presets:
-                </p>
-                <button
-                  onClick={() => {
-                    resetUssd();
-                    setUssdIsActive(true);
-                    setUssdInputSequence('1*1*1*1*2');
-                    sendUssdStep();
-                  }}
-                  className="w-full text-left bg-muted/40 hover:bg-muted p-2.5 rounded-xl border border-border transition text-xs space-y-0.5"
-                >
-                  <span className="font-bold text-critical block">🔴 Simulate Swahili Preeclampsia Alert</span>
-                  <span className="text-[11px] text-muted-foreground block">
-                    1 (Swahili) → 1 (Check-in) → 1 (Kichwa/Macho) → 1 (Damu) → 2 (Mtoto hachezi)
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    resetUssd();
-                    setUssdIsActive(true);
-                    setUssdInputSequence('3');
-                    sendUssdStep();
-                  }}
-                  className="w-full text-left bg-muted/40 hover:bg-muted p-2.5 rounded-xl border border-border transition text-xs space-y-0.5"
-                >
-                  <span className="font-bold text-accent block">⚡ Emergency SOS Panic Button</span>
-                  <span className="text-[11px] text-muted-foreground block">
-                    Direct SOS trigger alerts the clinic immediately
-                  </span>
+              <div className="flex items-center gap-2">
+                <button onClick={resetUssd} className="text-xs text-muted-foreground hover:text-foreground">
+                  Reset Session
                 </button>
               </div>
             </div>
           )}
 
+          {/* ============================================================ */}
           {/* --- VOICE AI MODE --- */}
+          {/* ============================================================ */}
           {activeMode === 'voice' && (
             <div className="space-y-4">
-              <div className="bg-muted/40 border border-border p-3.5 rounded-2xl space-y-3">
+              <div className="bg-card border border-border p-4 rounded-2xl space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-primary pulse-dot" />
-                    Automated Voice Call
-                  </span>
-                  <div className="flex bg-card p-0.5 rounded-lg border border-border text-[11px]">
+                  <span className="text-xs font-bold text-foreground">Language Model</span>
+                  <div className="flex gap-1">
                     <button
-                      onClick={() => {
-                        setVoiceLanguage('SWAHILI');
-                        setVoiceSampleText(
-                          'Ndio daktari, nina maumivu makali ya kichwa tangu jana, naona ukungu machoni na miguu imevimba sana. Mtoto pia hachezi vizuri leo.'
-                        );
-                      }}
-                      className={`px-2 py-0.5 rounded-md font-medium transition ${
-                        voiceLanguage === 'SWAHILI' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                      onClick={() => setVoiceLanguage('SWAHILI')}
+                      className={`text-[11px] px-2.5 py-1 rounded-md font-bold transition ${
+                        voiceLanguage === 'SWAHILI'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       Swahili
                     </button>
                     <button
-                      onClick={() => {
-                        setVoiceLanguage('ENGLISH');
-                        setVoiceSampleText(
-                          'Yes doctor, I have severe continuous headaches, blurry vision, and sudden swelling in my feet. The baby has stopped kicking as much.'
-                        );
-                      }}
-                      className={`px-2 py-0.5 rounded-md font-medium transition ${
-                        voiceLanguage === 'ENGLISH' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                      onClick={() => setVoiceLanguage('ENGLISH')}
+                      className={`text-[11px] px-2.5 py-1 rounded-md font-bold transition ${
+                        voiceLanguage === 'ENGLISH'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-muted-foreground hover:text-foreground'
                       }`}
                     >
                       English
@@ -341,8 +703,8 @@ export default function PhoneDrawer() {
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">
-                    Mother Audio Transcript (Simulated Voice-to-Text):
+                  <label className="block text-[11px] font-medium text-muted-foreground mb-1">
+                    Speech Transcript Audio Simulation
                   </label>
                   <textarea
                     rows={3}

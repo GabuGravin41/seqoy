@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
@@ -166,13 +167,32 @@ export default function ReferralTable() {
                     </p>
                   </td>
                   <td className="px-4 py-3">
-                    <button
-                      onClick={() => setDetailModal(ref)}
-                      className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                      title="View details"
-                    >
-                      <Icon name="EyeIcon" size={14} variant="outline" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/referrals/${ref.id}/print`}
+                        target="_blank"
+                        className="p-1.5 rounded-md hover:bg-muted text-emerald-400 hover:text-emerald-300 transition-colors"
+                        title="Print MOH 268 Physical Referral Slip (Strike/Offline Handover)"
+                      >
+                        <Icon name="PrinterIcon" size={14} variant="outline" />
+                      </Link>
+                      <a
+                        href={`/api/interoperability/fhir?referralId=${ref.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 rounded-md hover:bg-muted text-primary hover:text-primary/80 transition-colors"
+                        title="View HL7 FHIR R4 Bundle (KenyaEMR Handshake)"
+                      >
+                        <Icon name="CodeBracketIcon" size={14} variant="outline" />
+                      </a>
+                      <button
+                        onClick={() => setDetailModal(ref)}
+                        className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                        title="View details"
+                      >
+                        <Icon name="EyeIcon" size={14} variant="outline" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -206,8 +226,25 @@ export default function ReferralTable() {
                 <p className="font-semibold text-foreground leading-relaxed">{detailModal.preArrivalHandoverNote}</p>
               </div>
             )}
-            <div className="flex gap-3 pt-2 border-t border-border">
-              <button onClick={() => setDetailModal(null)} className="btn-secondary flex-1 text-xs">
+            <div className="flex flex-wrap gap-2 pt-3 border-t border-border">
+              <Link
+                href={`/referrals/${detailModal.id}/print`}
+                target="_blank"
+                className="btn-secondary text-xs flex-1 flex items-center justify-center gap-1.5"
+              >
+                <Icon name="PrinterIcon" size={14} variant="outline" className="text-emerald-400" />
+                Print MOH 268 Slip
+              </Link>
+              <a
+                href={`/api/interoperability/fhir?referralId=${detailModal.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-secondary text-xs flex-1 flex items-center justify-center gap-1.5"
+              >
+                <Icon name="CodeBracketIcon" size={14} variant="outline" className="text-primary" />
+                FHIR R4 Bundle
+              </a>
+              <button onClick={() => setDetailModal(null)} className="btn-secondary text-xs px-4">
                 Close
               </button>
             </div>

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 const checkinSchema = z.object({
-  channel: z.enum(["VOICE_AI", "USSD", "SMS", "WHATSAPP", "IN_PERSON"]).default("IN_PERSON"),
+  channel: z.enum(["VOICE_AI", "USSD", "SMS", "WHATSAPP", "IN_PERSON", "MANUAL_CALL"]).default("MANUAL_CALL"),
   languageUsed: z.string().optional(),
   hasSevereHeadache: z.boolean().default(false),
   hasBlurredVision: z.boolean().default(false),

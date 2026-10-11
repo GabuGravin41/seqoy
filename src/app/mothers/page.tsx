@@ -5,6 +5,7 @@ import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { useTelephony } from '@/context/TelephonyContext';
 import { toast } from 'sonner';
 
 interface Patient {
@@ -26,6 +27,7 @@ interface Patient {
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function ExpectantMothersPage() {
+  const { openDrawer } = useTelephony();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -200,14 +202,33 @@ export default function ExpectantMothersPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <Link
-                        href={`/my-pregnancy/${patient.id}`}
-                        target="_blank"
-                        className="px-2 py-1 rounded-lg text-xs font-semibold bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition inline-flex items-center gap-1"
-                      >
-                        <span>Mother Pass</span>
-                        <Icon name="ArrowTopRightOnSquareIcon" size={12} variant="outline" />
-                      </Link>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openDrawer('manual', {
+                              id: patient.id,
+                              name: patient.fullName,
+                              phone: patient.phoneNumber,
+                              gestationalWeek: patient.gestationalWeeks,
+                              riskLevel: patient.currentRiskLevel,
+                            })
+                          }
+                          className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20 transition inline-flex items-center gap-1.5 shadow-2xs"
+                          title="Instant 30-sec manual call & triage (Zero airtime/Twilio cost)"
+                        >
+                          <Icon name="PhoneIcon" size={13} variant="solid" />
+                          <span>Call / Triage</span>
+                        </button>
+                        <Link
+                          href={`/my-pregnancy/${patient.id}`}
+                          target="_blank"
+                          className="px-2 py-1 rounded-lg text-xs font-semibold bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition inline-flex items-center gap-1"
+                        >
+                          <span>Mother Pass</span>
+                          <Icon name="ArrowTopRightOnSquareIcon" size={12} variant="outline" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

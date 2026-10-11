@@ -18,22 +18,20 @@ and county transport systems, and bolting a fake version of it onto this product
 
 ## 🌟 What It Actually Does
 
-* **📞 Delay 1 — Reach every mother, on her terms**: an automated voice check-in call every 2 weeks by default
-  (mother/clinic can change the day and time — including self-service via the USSD menu), plus a weekly WhatsApp
-  message with baby-development info and a symptom prompt. Mothers without WhatsApp get the identical weekly cadence
-  over SMS instead — both channels are two-way, so a reply gets parsed for danger signs the same way a call does.
-* **🏥 Delay 3 — Facility readiness clinics can actually see**: live ICU/HDU bed, theatre, and blood-bank capacity per
-  referral hospital, sourced either from that hospital's own EHR/HIMS via a webhook, or from a 10-second manual
-  update screen for facilities that don't have that integration yet. Every facility's sync status is shown honestly —
-  never a blanket "connected" claim.
-* **🧠 Deterministic clinical triage**: WHO-aligned danger-sign scoring (severe headache, blurred vision, bleeding,
-  reduced fetal movement, hypertension) drives risk level — not a black box. Symptom extraction from call/message
-  transcripts uses Claude when configured, with a zero-cost keyword-match fallback.
-* **🎭 Role-based access, enforced server-side**: Clinic Midwife, Bed Manager, Blood Bank Officer, County Director,
-  Community Health Promoter, System Admin — real Clerk-backed accounts, real permission checks on every API route,
-  not a client-side costume.
+* **📞 Delay 1 — Reach every mother, on her terms**:
+  - **Zero-Toll Manual Outreach**: Frontline midwives and Community Health Promoters (CHPs) can dial mothers directly via their mobile SIM card (using standard minutes, 0 Twilio/toll-free fees required) with a 30-second rapid triage script in Swahili, English, or Somali, and tap danger sign checkboxes in 5 seconds.
+  - **Automated Cadence**: Automated voice check-in calls every 2 weeks by default (mother/clinic can change the day and time via USSD), plus weekly WhatsApp/SMS updates. Both channels are two-way, parsing replies for danger signs.
+* **🏥 Delay 3 — Facility readiness clinics can actually see**:
+  - Live ICU/HDU bed, theatre, and blood-bank capacity per referral hospital, sourced either from that hospital's own EHR/HIMS via a webhook, or from a 10-second manual update screen.
+  - **Strike-Resilient Routing**: When public hospitals face doctor or clinical officer strikes (KMPDU/KUCO), the engine dynamically routes emergencies to accredited faith-based and mission facilities (CHAK / KCCB: Tenwek, Kijabe, St. Luke's) under Social Health Authority (SHA) emergency coverage.
+  - **Zero Nurse Screen Burden**: Clinicians on duty don't need to learn a new application. Encounters sync silently to KenyaEMR (OpenMRS) via REST and HL7 FHIR R4, and generate a 1-click printable **MOH 268 Maternal Referral Slip** for paper charts.
+* **🧠 Deterministic clinical triage**: WHO-aligned danger-sign scoring (severe headache, blurred vision, bleeding, reduced fetal movement, hypertension) drives risk level — not a black box.
+* **🎭 Role-based access, enforced server-side**: Clinic Midwife, Bed Manager, Blood Bank Officer, County Director, Community Health Promoter, System Admin.
 * **📊 MPDSR surveillance, scoped honestly**: County-level Delay 1 / Delay 3 audit reporting for MoH compliance.
-  Delay 2 exists only as an optional free-text note a nurse can add — never computed or fabricated.
+* **📖 Complete Operational Guides**:
+  - [Manual Calling & Strike-Resilient Deployment Guide](MANUAL_CALLING_AND_DEPLOYMENT_GUIDE.md)
+  - [Kenya Health Leadership & Institutional Outreach Directory](KENYA_HEALTH_LEADERSHIP_DIRECTORY.md)
+  - [EHR & KenyaEMR Integration Specification](EHR_INTEGRATION_SPECIFICATION.md)
 
 ---
 
