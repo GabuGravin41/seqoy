@@ -27,10 +27,14 @@ const newReferralSchema = z.object({
   receivingFacilityId: z.coerce.number().int(),
   clinicalIndication: z.string().min(1),
   urgencyLevel: z.enum(["URGENT", "EMERGENCY", "CRITICAL_STAT"]).default("EMERGENCY"),
+  acuityTier: z.enum(["ROUTINE", "EMERGENCY", "TERTIARY_MANDATORY"]).optional(),
+  isAcuityOverride: z.boolean().default(false),
+  acuityOverrideReason: z.string().optional(),
   icuBedReserved: z.boolean().default(false),
   theatreReserved: z.boolean().default(false),
   bloodUnitsReserved: z.coerce.number().int().min(0).default(0),
   bloodTypeReserved: z.string().optional(),
+  unreservedBloodReserved: z.coerce.number().int().min(0).default(0),
   preArrivalHandoverNote: z.string().optional(),
 });
 

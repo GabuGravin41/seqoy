@@ -121,6 +121,29 @@ assert(
   "Smart Matcher prevents blind referral to KNH (0 ICU beds) and safely routes to a capable Level 5 facility"
 );
 
+// Kenyan Reality Test 4B: Catastrophic Acuity Override Mandate (KNH Level 6)
+const tertiaryMatch = matchReferralHospitals(
+  {
+    referringFacilityId: 1, // Kangemi
+    patientBloodType: "O-",
+    icuNeeded: true,
+    theatreNeeded: true,
+    bloodUnitsNeeded: 2,
+    urgency: "CRITICAL_STAT",
+    acuityTier: "TERTIARY_MANDATORY",
+    tertiaryIndication: "UTERINE_RUPTURE",
+  },
+  initialFacilities,
+  initialCapacities
+);
+
+assert(
+  tertiaryMatch.recommendedHospital !== null &&
+    tertiaryMatch.recommendedHospital.facility.name.includes("Kenyatta National Hospital") &&
+    tertiaryMatch.recommendedHospital.isAcuityOverride === true,
+  "Acuity Override safely routes catastrophic tertiary emergencies (e.g. Uterine Rupture) to KNH despite 0 available ICU beds"
+);
+
 // 5. RBAC Permission Matrix Tests
 console.log("\n5️⃣ Testing RBAC Permission Matrix...");
 assert(

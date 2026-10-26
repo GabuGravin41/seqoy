@@ -14,6 +14,9 @@ const matchSchema = z.object({
   theatreNeeded: z.boolean().default(true),
   bloodUnitsNeeded: z.coerce.number().int().min(0).default(2),
   urgency: z.enum(["URGENT", "EMERGENCY", "CRITICAL_STAT"]).default("EMERGENCY"),
+  acuityTier: z.enum(["ROUTINE", "EMERGENCY", "TERTIARY_MANDATORY"]).optional(),
+  tertiaryIndication: z.enum(["HELLP_DIALYSIS", "UTERINE_RUPTURE", "ACCRETA_SPECTRUM", "EXTREME_PREMATURITY_VENTILATION", "DIC_BLOOD_PRODUCTS", "NONE"]).optional(),
+  isHemorrhageEmergency: z.boolean().optional(),
 });
 
 /** Delay 3: which referral hospital genuinely has capacity for this patient right now. */
@@ -42,6 +45,9 @@ export async function POST(req: NextRequest) {
       theatreNeeded: body.theatreNeeded,
       bloodUnitsNeeded: body.bloodUnitsNeeded,
       urgency: body.urgency,
+      acuityTier: body.acuityTier,
+      tertiaryIndication: body.tertiaryIndication,
+      isHemorrhageEmergency: body.isHemorrhageEmergency,
     };
 
     const [facilities, capacities] = await Promise.all([facilitiesRepo.listFacilities(), capacitiesRepo.listCapacities()]);

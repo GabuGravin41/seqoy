@@ -112,10 +112,20 @@ export const hospitalCapacities = pgTable("hospital_capacities", {
   bloodStockO_Pos: integer("blood_stock_o_pos").default(0).notNull(),
   bloodStockO_Neg: integer("blood_stock_o_neg").default(0).notNull(),
 
-  // Emergency Specialist Staffing
+  // CRITICAL KENYAN REALITY: Uncrossmatched units strictly locked for acute PPH/APH hemorrhage
+  unreservedEmergencyONeg: integer("unreserved_emergency_o_neg").default(0).notNull(),
+
+  // Emergency Specialist Staffing & Tertiary Capabilities
   obstetricianOnDuty: boolean("obstetrician_on_duty").default(true).notNull(),
   anesthesiologistOnDuty: boolean("anesthesiologist_on_duty").default(true).notNull(),
   neonatologistOnDuty: boolean("neonatologist_on_duty").default(false).notNull(),
+  isApexReferralCenter: boolean("is_apex_referral_center").default(false).notNull(), // true for Level 6 apex facilities (KNH, MTRH)
+  hemodialysisAvailable: boolean("hemodialysis_available").default(false).notNull(), // for HELLP renal shutdown
+  bloodIrradiationAvailable: boolean("blood_irradiation_available").default(false).notNull(),
+  neonatalVentilatorsAvailable: integer("neonatal_ventilators_available").default(0).notNull(),
+
+  // Zero-login duty station communication
+  dutyStationWhatsappPhone: varchar("duty_station_whatsapp_phone", { length: 30 }),
 
   // How this facility's numbers get updated: an automated EHR/HIMS webhook
   // push, or a staff member typing it into the manual update screen. Shown
@@ -138,11 +148,21 @@ export const facilityReferrals = pgTable("facility_referrals", {
   clinicalIndication: varchar("clinical_indication", { length: 100 }).notNull(), // SEVERE_PREECLAMPSIA, PPH, ECLAMPSIA, OBSTRUCTED_LABOR
   urgencyLevel: varchar("urgency_level", { length: 20 }).default("EMERGENCY").notNull(), // URGENT, EMERGENCY, CRITICAL_STAT
 
+  // Acuity Override Protocol (for catastrophic tertiary emergencies at Level 6 Apex)
+  acuityTier: varchar("acuity_tier", { length: 30 }).default("ROUTINE").notNull(), // ROUTINE, EMERGENCY, TERTIARY_MANDATORY
+  isAcuityOverride: boolean("is_acuity_override").default(false).notNull(),
+  acuityOverrideReason: text("acuity_override_reason"),
+
   // Resource Reservations (checked against the receiving facility's live capacity)
   icuBedReserved: boolean("icu_bed_reserved").default(false).notNull(),
   theatreReserved: boolean("theatre_reserved").default(false).notNull(),
   bloodUnitsReserved: integer("blood_units_reserved").default(0).notNull(),
   bloodTypeReserved: varchar("blood_type_reserved", { length: 10 }),
+  unreservedBloodReserved: integer("unreserved_blood_reserved").default(0).notNull(),
+
+  // Zero-login WhatsApp Dispatch Telemetry
+  whatsappDispatchStatus: varchar("whatsapp_dispatch_status", { length: 30 }).default("NOT_DISPATCHED").notNull(), // NOT_DISPATCHED, DISPATCHED, ACKNOWLEDGED
+  whatsappDispatchedAt: timestamp("whatsapp_dispatched_at"),
 
   // Lifecycle Status
   status: varchar("status", { length: 40 }).default("REQUESTED").notNull(),

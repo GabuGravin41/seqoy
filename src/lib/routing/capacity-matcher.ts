@@ -7,6 +7,9 @@ export interface ReferralRequirement {
   theatreNeeded: boolean;
   bloodUnitsNeeded: number;
   urgency: "URGENT" | "EMERGENCY" | "CRITICAL_STAT";
+  acuityTier?: "ROUTINE" | "EMERGENCY" | "TERTIARY_MANDATORY";
+  tertiaryIndication?: "HELLP_DIALYSIS" | "UTERINE_RUPTURE" | "ACCRETA_SPECTRUM" | "EXTREME_PREMATURITY_VENTILATION" | "DIC_BLOOD_PRODUCTS" | "NONE";
+  isHemorrhageEmergency?: boolean;
 }
 
 export interface MatchedHospital {
@@ -19,6 +22,11 @@ export interface MatchedHospital {
   capacityScore: number; // 0 - 100
   recommendationRank: number;
   matchingSummary: string;
+  isAcuityOverride?: boolean;
+  acuityOverrideNotice?: string;
+  unreservedEmergencyONeg: number;
+  bloodReservationWarning?: string;
+  dutyStationWhatsappPhone?: string;
 }
 
 // Calculate Great Circle Distance in KM (Haversine formula)
@@ -57,10 +65,16 @@ export function matchReferralHospitals(
   allHospitals: MatchedHospital[];
   blindReferralRiskIdentified: boolean;
   avoidedBlindHospitalName?: string;
+  isAcuityOverrideActive?: boolean;
 } {
   const referringFacility = allFacilities.find((f) => f.id === req.referringFacilityId) || allFacilities[0];
-
   const referralFacilities = allFacilities.filter((f) => f.isReferralCenter);
+
+  const isTertiaryMandatory =
+    req.acuityTier === "TERTIARY_MANDATORY" ||
+    (req.tertiaryIndication && req.tertiaryIndication !== "NONE");
+
+  let isAcuityOverrideActive = false;
 
   const matchedList: MatchedHospital[] = referralFacilities.map((facility) => {
     const capacity = allCapacities.find((c) => c.facilityId === facility.id) || {
@@ -75,9 +89,14 @@ export function matchReferralHospitals(
       operatingTheatresAvailable: 0,
       theatreReadinessStatus: "SHORT_STAFFED",
       bloodStock: { "A+": 0, "A-": 0, "B+": 0, "B-": 0, "AB+": 0, "AB-": 0, "O+": 0, "O-": 0 },
+      unreservedEmergencyONeg: 0,
       obstetricianOnDuty: false,
       anesthesiologistOnDuty: false,
       neonatologistOnDuty: false,
+      isApexReferralCenter: facility.name.includes("Kenyatta National Hospital"),
+      hemodialysisAvailable: facility.name.includes("Kenyatta National Hospital"),
+      bloodIrradiationAvailable: facility.name.includes("Kenyatta National Hospital"),
+      neonatalVentilatorsAvailable: 0,
       syncMode: "MANUAL" as const,
       lastUpdated: new Date().toISOString(),
     };
@@ -93,13 +112,45 @@ export function matchReferralHospitals(
     const bottlenecks: string[] = [];
     let isCapable = true;
     let score = 100;
+    let isAcuityOverride = false;
+    let acuityOverrideNotice: string | undefined;
 
-    // Check ICU requirement
+    const isApex = capacity.isApexReferralCenter || facility.tier === "LEVEL_6_NATIONAL" || facility.name.includes("Kenyatta National Hospital");
+
+    // =========================================================================
+    // KENYAN REALITY 1: KNH NBU & ICU OVERCROWDING VS. TERTIARY ACUITY OVERRIDE
+    // =========================================================================
+    if (isTertiaryMandatory) {
+      if (isApex) {
+        // Under Level 6 Apex Escalation Mandate, catastrophic tertiary emergencies
+        // (ruptured uterus, HELLP with anuria, peripartum DIC) override raw bed constraints.
+        isAcuityOverride = true;
+        isAcuityOverrideActive = true;
+        acuityOverrideNotice = `APEX ACUITY OVERRIDE: Tertiary surgical/hemodialysis rescue required (${req.tertiaryIndication || 'Level 6 Acuity'}). Standard bed count constraint bypassed under Apex Resuscitation Protocol. Pre-arrival emergency alert transmitted to Chief Resident.`;
+        score = 110; // prioritize apex destination
+      } else {
+        // Non-Apex facilities lack tertiary hemodialysis / complex reconstructive subspecialists
+        if (req.tertiaryIndication === "HELLP_DIALYSIS" && !capacity.hemodialysisAvailable) {
+          isCapable = false;
+          bottlenecks.push("Non-Apex facility lacks emergency obstetric hemodialysis for HELLP renal shutdown");
+          score -= 60;
+        } else if (req.tertiaryIndication === "UTERINE_RUPTURE" || req.tertiaryIndication === "ACCRETA_SPECTRUM") {
+          bottlenecks.push("Secondary facility lacks on-site interventional radiology & tertiary surgical vascular control");
+          score -= 30;
+        }
+      }
+    }
+
+    // Check ICU requirement (unless bypassed under Apex Acuity Override)
     if (req.icuNeeded) {
       if (capacity.icuBedsAvailable < 1) {
-        isCapable = false;
-        bottlenecks.push("0 ICU beds available (100% occupied)");
-        score -= 50;
+        if (!isAcuityOverride) {
+          isCapable = false;
+          bottlenecks.push("0 ICU beds available (100% occupied)");
+          score -= 50;
+        } else {
+          bottlenecks.push("ICU at 100% census (Acuity Override active: Resuscitation cot assigned)");
+        }
       } else {
         score += capacity.icuBedsAvailable * 5;
       }
@@ -108,30 +159,48 @@ export function matchReferralHospitals(
     // Check Theatre requirement
     if (req.theatreNeeded) {
       if (capacity.operatingTheatresAvailable < 1 || capacity.theatreReadinessStatus === "SURGERY_IN_PROGRESS") {
-        isCapable = false;
-        bottlenecks.push("Operating Theatre occupied/unavailable");
-        score -= 40;
+        if (!isAcuityOverride) {
+          isCapable = false;
+          bottlenecks.push("Operating Theatre occupied/unavailable");
+          score -= 40;
+        } else {
+          bottlenecks.push("Emergency Theatre queue active; pre-arrival alert clears emergency C-Section table");
+        }
       } else {
         score += capacity.operatingTheatresAvailable * 4;
       }
     }
 
-    // Check Blood stock
+    // =========================================================================
+    // KENYAN REALITY 2: BLOOD BANK VOLATILITY (UNRESERVED EMERGENCY O-NEG)
+    // =========================================================================
     const bType = req.patientBloodType as keyof typeof capacity.bloodStock;
     const availableUnits = capacity.bloodStock[bType] ?? 0;
-    if (req.bloodUnitsNeeded > 0) {
-      if (availableUnits < req.bloodUnitsNeeded) {
-        // Check emergency universal O- fallback
-        const oNegUnits = capacity.bloodStock["O-"] ?? 0;
-        if (bType !== "O-" && oNegUnits >= req.bloodUnitsNeeded) {
-          bottlenecks.push(`Exact ${bType} low (${availableUnits} units), but ${oNegUnits} units O- universal reserve available`);
+    const unreservedEmergencyONeg = capacity.unreservedEmergencyONeg ?? 0;
+    let bloodReservationWarning: string | undefined;
+
+    if (req.bloodUnitsNeeded > 0 || req.isHemorrhageEmergency) {
+      const unitsNeeded = req.bloodUnitsNeeded > 0 ? req.bloodUnitsNeeded : 2;
+
+      // Check strictly against unreserved emergency units if acute hemorrhage is flagged
+      if (unreservedEmergencyONeg < unitsNeeded) {
+        if (availableUnits > 0 || (capacity.bloodStock["O-"] ?? 0) > 0) {
+          bloodReservationWarning = `BLOOD ALLOCATION LOCK: Fridge has stock on inventory, but 0 uncrossmatched unreserved emergency units (locked for ongoing surgical suites). Mobilizing Damu Kenya (KNBTS) blood rider.`;
+          bottlenecks.push(bloodReservationWarning);
+          if (!isAcuityOverride) {
+            score -= 25;
+          }
         } else {
-          isCapable = false;
-          bottlenecks.push(`Blood deficit: ${availableUnits}/${req.bloodUnitsNeeded} units ${bType} in stock`);
-          score -= 40;
+          if (!isAcuityOverride) {
+            isCapable = false;
+            bottlenecks.push(`Blood deficit: 0 units in stock`);
+            score -= 40;
+          } else {
+            bottlenecks.push("Blood deficit at receiving hospital; Damu Kenya Emergency Dispatch mobilized");
+          }
         }
       } else {
-        score += availableUnits * 2;
+        score += unreservedEmergencyONeg * 4;
       }
     }
 
@@ -145,8 +214,10 @@ export function matchReferralHospitals(
     score -= distKm * 1.5;
 
     let matchingSummary = "";
-    if (isCapable) {
-      matchingSummary = `CONFIRMED CAPACITY: ${capacity.icuBedsAvailable} ICU beds, ${capacity.operatingTheatresAvailable} Theatre ready, ${availableUnits} units ${req.patientBloodType} blood. ETA: ~${driveMinutes} mins.`;
+    if (isAcuityOverride) {
+      matchingSummary = `APEX ACUITY OVERRIDE: Tertiary surgical/dialysis intervention authorized at ${facility.name} despite census saturation. Pre-arrival emergency alert sent. ETA: ~${driveMinutes} mins.`;
+    } else if (isCapable) {
+      matchingSummary = `CONFIRMED CAPACITY: ${capacity.icuBedsAvailable} ICU beds, ${capacity.operatingTheatresAvailable} Theatre ready, ${unreservedEmergencyONeg} unreserved emergency O- units. ETA: ~${driveMinutes} mins.`;
     } else {
       matchingSummary = `CAPACITY BLOCKED: ${bottlenecks.join("; ")}`;
     }
@@ -161,10 +232,15 @@ export function matchReferralHospitals(
       capacityScore: Math.max(0, Math.round(score)),
       recommendationRank: 0,
       matchingSummary,
+      isAcuityOverride,
+      acuityOverrideNotice,
+      unreservedEmergencyONeg,
+      bloodReservationWarning,
+      dutyStationWhatsappPhone: capacity.dutyStationWhatsappPhone,
     };
   });
 
-  // Sort capable first, then highest capacity score, then lowest transit time
+  // Sort capable / override first, then highest capacity score, then lowest transit time
   matchedList.sort((a, b) => {
     if (a.isCapable && !b.isCapable) return -1;
     if (!a.isCapable && b.isCapable) return 1;
@@ -177,12 +253,12 @@ export function matchReferralHospitals(
 
   const recommendedHospital = matchedList.find((h) => h.isCapable) || null;
 
-  // Check if standard national default (e.g. KNH) would have caused a blind referral disaster
+  // Check if standard national default (e.g. KNH) would have caused a blind referral disaster for routine cases
   const knh = matchedList.find((h) => h.facility.name.includes("Kenyatta National Hospital"));
   let blindReferralRiskIdentified = false;
   let avoidedBlindHospitalName: string | undefined;
 
-  if (knh && !knh.isCapable && recommendedHospital && recommendedHospital.facility.id !== knh.facility.id) {
+  if (!isTertiaryMandatory && knh && !knh.isCapable && recommendedHospital && recommendedHospital.facility.id !== knh.facility.id) {
     blindReferralRiskIdentified = true;
     avoidedBlindHospitalName = `${knh.facility.name} (Blocked: ${knh.bottlenecks.join(", ")})`;
   }
@@ -192,5 +268,6 @@ export function matchReferralHospitals(
     allHospitals: matchedList,
     blindReferralRiskIdentified,
     avoidedBlindHospitalName,
+    isAcuityOverrideActive,
   };
 }

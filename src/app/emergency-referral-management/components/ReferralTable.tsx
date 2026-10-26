@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Modal from '@/components/ui/Modal';
+import { toast } from 'sonner';
 
 type ReferralStatus = 'REQUESTED' | 'ACKNOWLEDGED' | 'ACCEPTED' | 'ADMITTED' | 'COMPLETED' | 'DECLINED';
 
@@ -16,6 +17,10 @@ interface Referral {
   receivingFacilityName?: string;
   clinicalIndication: string;
   bloodTypeReserved?: string;
+  unreservedBloodReserved?: number;
+  isAcuityOverride?: boolean;
+  acuityOverrideReason?: string;
+  whatsappDispatchStatus?: string;
   status: ReferralStatus;
   initiatedAt: string;
   acknowledgedAt?: string;
@@ -32,6 +37,7 @@ export default function ReferralTable() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [detailModal, setDetailModal] = useState<Referral | null>(null);
+  const [dispatchingId, setDispatchingId] = useState<number | null>(null);
   const perPage = 6;
 
   useEffect(() => {
@@ -41,6 +47,39 @@ export default function ReferralTable() {
       .catch(() => setReferrals([]))
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSendWhatsAppAlert = async (ref: Referral) => {
+    setDispatchingId(ref.id);
+    try {
+      const res = await fetch('/api/referrals/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          referralId: ref.id,
+          channel: 'WHATSAPP',
+          estimatedMinutes: 35,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to dispatch WhatsApp alert');
+        return;
+      }
+      toast.success(`WhatsApp Pre-Arrival Alert Sent!`, {
+        description: `Delivered to ${ref.receivingFacilityName} triage desk. Senior registrar alerted.`,
+      });
+      setReferrals((prev) =>
+        prev.map((r) => (r.id === ref.id ? { ...r, whatsappDispatchStatus: 'DISPATCHED' } : r))
+      );
+      if (detailModal && detailModal.id === ref.id) {
+        setDetailModal((prev) => (prev ? { ...prev, whatsappDispatchStatus: 'DISPATCHED' } : null));
+      }
+    } catch (e: any) {
+      toast.error('Network error during dispatch', { description: e.message });
+    } finally {
+      setDispatchingId(null);
+    }
+  };
 
   const filtered = useMemo(() => {
     return referrals.filter((r) => {
@@ -121,8 +160,8 @@ export default function ReferralTable() {
                 <th className="px-4 py-3 text-left stat-label">Destination</th>
                 <th className="px-4 py-3 text-left stat-label">Indication</th>
                 <th className="px-4 py-3 text-left stat-label">Blood</th>
+                <th className="px-4 py-3 text-left stat-label">WhatsApp Alert</th>
                 <th className="px-4 py-3 text-left stat-label">Status</th>
-                <th className="px-4 py-3 text-left stat-label">Initiated</th>
                 <th className="px-4 py-3 text-left stat-label">Actions</th>
               </tr>
             </thead>
@@ -149,9 +188,16 @@ export default function ReferralTable() {
                     <p className="text-xs font-semibold text-foreground whitespace-nowrap">{ref.receivingFacilityName}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 bg-critical/10 text-critical text-[10px] font-semibold rounded-full whitespace-nowrap">
-                      {ref.clinicalIndication}
-                    </span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="px-2 py-0.5 bg-critical/10 text-critical text-[10px] font-semibold rounded-full whitespace-nowrap w-fit">
+                        {ref.clinicalIndication}
+                      </span>
+                      {ref.isAcuityOverride && (
+                        <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[9px] font-black rounded uppercase w-fit">
+                          ⚠️ Apex Override
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <span className="px-2 py-0.5 bg-secondary text-secondary-foreground text-xs font-bold font-tabular rounded">
@@ -159,15 +205,29 @@ export default function ReferralTable() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                        ref.whatsappDispatchStatus === 'DISPATCHED'
+                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {ref.whatsappDispatchStatus === 'DISPATCHED' ? '✓ Dispatched' : 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
                     <StatusBadge status={ref.status} />
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-xs text-foreground font-tabular whitespace-nowrap">
-                      {new Date(ref.initiatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </td>
-                  <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleSendWhatsAppAlert(ref)}
+                        disabled={dispatchingId === ref.id}
+                        className="p-1.5 rounded-md hover:bg-muted text-emerald-400 hover:text-emerald-300 transition-colors"
+                        title="Send WhatsApp Pre-Arrival Triage Alert to Hospital Desk"
+                      >
+                        <Icon name="ChatBubbleLeftRightIcon" size={14} variant="outline" />
+                      </button>
                       <Link
                         href={`/referrals/${ref.id}/print`}
                         target="_blank"
@@ -210,23 +270,47 @@ export default function ReferralTable() {
       >
         {detailModal && (
           <div className="space-y-4">
+            {detailModal.isAcuityOverride && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs space-y-1">
+                <p className="font-bold text-amber-400 uppercase tracking-wider text-[10px]">
+                  ⚠️ Level 6 Apex Acuity Override Activated
+                </p>
+                <p className="text-amber-200/90 leading-relaxed">
+                  {detailModal.acuityOverrideReason ||
+                    'Catastrophic maternal emergency requiring Level 6 tertiary intervention (hemodialysis/sub-specialist reconstruction). Bypassed census limits under Kenya National Emergency Obstetric Protocol.'}
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="bg-muted/30 rounded-lg p-3">
                 <p className="text-[10px] text-muted-foreground uppercase mb-1">Destination Facility</p>
                 <p className="font-semibold text-foreground">{detailModal.receivingFacilityName}</p>
               </div>
               <div className="bg-muted/30 rounded-lg p-3">
-                <p className="text-[10px] text-muted-foreground uppercase mb-1">Required Blood</p>
-                <p className="font-semibold text-foreground">{detailModal.bloodTypeReserved ?? 'Not specified'}</p>
+                <p className="text-[10px] text-muted-foreground uppercase mb-1">Blood Units Hold</p>
+                <p className="font-semibold text-foreground">
+                  {detailModal.bloodTypeReserved ?? 'Not specified'} · {detailModal.unreservedBloodReserved ? `${detailModal.unreservedBloodReserved} Emergency O- Hold` : 'Standard'}
+                </p>
               </div>
             </div>
+
             {detailModal.preArrivalHandoverNote && (
               <div className="bg-muted/30 rounded-lg p-3 text-xs">
                 <p className="text-[10px] text-muted-foreground uppercase mb-1">Handover Note</p>
                 <p className="font-semibold text-foreground leading-relaxed">{detailModal.preArrivalHandoverNote}</p>
               </div>
             )}
+
             <div className="flex flex-wrap gap-2 pt-3 border-t border-border">
+              <button
+                onClick={() => handleSendWhatsAppAlert(detailModal)}
+                disabled={dispatchingId === detailModal.id}
+                className="btn-primary text-xs flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white"
+              >
+                <Icon name="ChatBubbleLeftRightIcon" size={14} variant="outline" />
+                {detailModal.whatsappDispatchStatus === 'DISPATCHED' ? 'Resend WhatsApp Alert' : 'Send WhatsApp Triage Alert'}
+              </button>
               <Link
                 href={`/referrals/${detailModal.id}/print`}
                 target="_blank"

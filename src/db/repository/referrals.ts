@@ -24,10 +24,16 @@ async function rowToReferral(row: ReferralRow): Promise<FacilityReferral> {
     receivingFacilityName: receivingFacility?.name,
     clinicalIndication: row.clinicalIndication,
     urgencyLevel: row.urgencyLevel as FacilityReferral["urgencyLevel"],
+    acuityTier: row.acuityTier as FacilityReferral["acuityTier"],
+    isAcuityOverride: row.isAcuityOverride,
+    acuityOverrideReason: row.acuityOverrideReason ?? undefined,
     icuBedReserved: row.icuBedReserved,
     theatreReserved: row.theatreReserved,
     bloodUnitsReserved: row.bloodUnitsReserved,
     bloodTypeReserved: row.bloodTypeReserved ?? undefined,
+    unreservedBloodReserved: row.unreservedBloodReserved,
+    whatsappDispatchStatus: row.whatsappDispatchStatus as FacilityReferral["whatsappDispatchStatus"],
+    whatsappDispatchedAt: row.whatsappDispatchedAt ? row.whatsappDispatchedAt.toISOString() : undefined,
     status: row.status as FacilityReferral["status"],
     preArrivalHandoverNote: row.preArrivalHandoverNote ?? undefined,
     initiatedAt: row.initiatedAt.toISOString(),
@@ -71,10 +77,14 @@ export interface NewReferralInput {
   receivingFacilityId: number;
   clinicalIndication: string;
   urgencyLevel: FacilityReferral["urgencyLevel"];
+  acuityTier?: FacilityReferral["acuityTier"];
+  isAcuityOverride?: boolean;
+  acuityOverrideReason?: string;
   icuBedReserved: boolean;
   theatreReserved: boolean;
   bloodUnitsReserved: number;
   bloodTypeReserved?: string;
+  unreservedBloodReserved?: number;
   preArrivalHandoverNote?: string;
 }
 
@@ -100,10 +110,15 @@ export async function createReferral(input: NewReferralInput): Promise<FacilityR
       receivingFacilityName: receivingFacility?.name,
       clinicalIndication: input.clinicalIndication,
       urgencyLevel: input.urgencyLevel,
+      acuityTier: input.acuityTier || "ROUTINE",
+      isAcuityOverride: input.isAcuityOverride || false,
+      acuityOverrideReason: input.acuityOverrideReason,
       icuBedReserved: input.icuBedReserved,
       theatreReserved: input.theatreReserved,
       bloodUnitsReserved: input.bloodUnitsReserved,
       bloodTypeReserved: input.bloodTypeReserved,
+      unreservedBloodReserved: input.unreservedBloodReserved || 0,
+      whatsappDispatchStatus: "NOT_DISPATCHED",
       status: "REQUESTED",
       preArrivalHandoverNote: input.preArrivalHandoverNote,
       initiatedAt: new Date().toISOString(),
@@ -122,15 +137,43 @@ export async function createReferral(input: NewReferralInput): Promise<FacilityR
       receivingFacilityId: input.receivingFacilityId,
       clinicalIndication: input.clinicalIndication,
       urgencyLevel: input.urgencyLevel,
+      acuityTier: input.acuityTier || "ROUTINE",
+      isAcuityOverride: input.isAcuityOverride || false,
+      acuityOverrideReason: input.acuityOverrideReason,
       icuBedReserved: input.icuBedReserved,
       theatreReserved: input.theatreReserved,
       bloodUnitsReserved: input.bloodUnitsReserved,
       bloodTypeReserved: input.bloodTypeReserved,
+      unreservedBloodReserved: input.unreservedBloodReserved || 0,
+      whatsappDispatchStatus: "NOT_DISPATCHED",
       status: "REQUESTED",
       preArrivalHandoverNote: input.preArrivalHandoverNote,
     })
     .returning();
   return rowToReferral(row);
+}
+
+export async function updateReferralDispatch(
+  id: number,
+  status: "DISPATCHED" | "ACKNOWLEDGED"
+): Promise<FacilityReferral | undefined> {
+  const db = getDb();
+  if (!db) {
+    const referral = mockStore.referrals.find((r) => r.id === id);
+    if (!referral) return undefined;
+    referral.whatsappDispatchStatus = status;
+    referral.whatsappDispatchedAt = new Date().toISOString();
+    return referral;
+  }
+  const [row] = await db
+    .update(schema.facilityReferrals)
+    .set({
+      whatsappDispatchStatus: status,
+      whatsappDispatchedAt: new Date(),
+    })
+    .where(eq(schema.facilityReferrals.id, id))
+    .returning();
+  return row ? rowToReferral(row) : undefined;
 }
 
 export async function updateReferralStatus(

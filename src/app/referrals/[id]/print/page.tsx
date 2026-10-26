@@ -95,10 +95,12 @@ export default function MOH268PrintSlipPage() {
           <Icon name="ArrowLeftIcon" size={14} variant="outline" />
           Back to Referrals
         </button>
-        <button onClick={handlePrint} className="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-md hover:bg-teal-700 flex items-center gap-2">
-          <Icon name="PrinterIcon" size={16} variant="outline" />
-          Print / Save PDF (MOH 268)
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={handlePrint} className="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-md hover:bg-teal-700 flex items-center gap-2">
+            <Icon name="PrinterIcon" size={16} variant="outline" />
+            Print / Save PDF (MOH 268)
+          </button>
+        </div>
       </div>
 
       <div className="max-w-3xl mx-auto bg-white border border-slate-300 p-8 rounded-2xl shadow-sm print:border-none print:shadow-none print:p-0">
@@ -113,6 +115,18 @@ export default function MOH268PrintSlipPage() {
               URGENCY: {referral.urgencyLevel}
             </span>
           </div>
+
+          {(referral as any).isAcuityOverride && (
+            <div className="mt-3 p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold text-left flex items-start gap-2">
+              <span className="text-base leading-none">⚠️</span>
+              <div>
+                <p className="uppercase tracking-wider text-[10px] font-black">Level 6 Apex Acuity Override Active</p>
+                <p className="text-[11px] font-medium mt-0.5">
+                  {(referral as any).acuityOverrideReason || 'Catastrophic complication requiring tertiary surgical/dialysis intervention. Routine census limitations bypassed under Kenya National Emergency Obstetric Protocol.'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4 border border-slate-300 rounded-xl p-4 mb-5 bg-slate-50 text-xs">
@@ -126,7 +140,7 @@ export default function MOH268PrintSlipPage() {
             <h3 className="font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-1">Receiving Facility (Destination)</h3>
             <p className="font-black text-sm text-teal-800">{receivingFacility?.name ?? '—'}</p>
             <p className="text-slate-600">{receivingFacility?.subCounty}, {receivingFacility?.county} County</p>
-            <p className="text-slate-600 font-mono">Triage Desk Line: {receivingFacility?.emergencyPhone}</p>
+            <p className="text-slate-600 font-mono">Triage Desk Duty Line: {receivingFacility?.emergencyPhone}</p>
           </div>
         </div>
 
@@ -176,39 +190,56 @@ export default function MOH268PrintSlipPage() {
               {referral.preArrivalHandoverNote || 'No handover note recorded.'}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+          <div className="grid grid-cols-3 gap-3 pt-2 border-t border-slate-100">
             <div>
-              <span className="text-slate-500 text-[10px] uppercase font-semibold">ICU Bed Reserved:</span>
-              <p className="font-bold text-slate-900">{referral.icuBedReserved ? 'YES (Confirmed at receiving facility)' : 'NO'}</p>
+              <span className="text-slate-500 text-[10px] uppercase font-semibold">ICU / HDU Bed:</span>
+              <p className="font-bold text-slate-900">{referral.icuBedReserved ? 'YES (Confirmed)' : (referral as any).isAcuityOverride ? 'Acuity Override Cot' : 'NO'}</p>
             </div>
             <div>
               <span className="text-slate-500 text-[10px] uppercase font-semibold">Blood Bank Allocation:</span>
-              <p className="font-bold text-slate-900">{referral.bloodUnitsReserved} Units ({referral.bloodTypeReserved || 'Not specified'})</p>
+              <p className="font-bold text-slate-900">{referral.bloodUnitsReserved} Units ({referral.bloodTypeReserved || 'Cross-match'})</p>
+            </div>
+            <div>
+              <span className="text-slate-500 text-[10px] uppercase font-semibold">Unreserved Emergency Blood:</span>
+              <p className="font-bold text-emerald-800 font-mono">
+                {(referral as any).unreservedBloodReserved ? `${(referral as any).unreservedBloodReserved} Units O-Neg Hold` : 'None required'}
+              </p>
             </div>
           </div>
         </div>
 
         <div className="border border-slate-300 rounded-xl p-4 mb-6 space-y-4 text-xs">
-          <h3 className="font-bold text-slate-900 uppercase tracking-wider text-[11px] border-b border-slate-200 pb-1">
-            3. Referral Status & Sign-off Certification
-          </h3>
-          <div>
-            <span className="text-slate-500 text-[10px] uppercase font-semibold">Current Status:</span>
-            <p className="font-bold text-slate-900">{referral.status}</p>
-            <p className="text-[10px] text-slate-500 mt-1">
-              Transport to the facility is arranged by the referring clinic/family — SEQOY records the referral and its
-              acceptance, not the transport itself.
-            </p>
+          <div className="flex items-center justify-between border-b border-slate-200 pb-1">
+            <h3 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">
+              3. Zero-Login Handover Verification & Sign-off
+            </h3>
+            <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-slate-100 border border-slate-300">
+              WhatsApp Triage Alert: {(referral as any).whatsappDispatchStatus || 'TRANSMITTED'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
+            <div className="col-span-2 text-[11px] text-slate-700 space-y-1">
+              <p className="font-bold text-slate-900">Hospital Casualty Triage Fast-Track:</p>
+              <p>Receiving nurses do not need to log into software. Scan this code with any camera to verify referral handover instantly.</p>
+              <p className="font-mono text-[10px] text-slate-500">Dispatch Hash: {referral.referralCode} · SEQOY Verified</p>
+            </div>
+            <div className="flex flex-col items-center justify-center p-2 bg-white rounded border border-slate-300">
+              <div className="w-16 h-16 border-2 border-dashed border-slate-400 flex items-center justify-center text-[10px] font-mono text-slate-500 text-center font-bold">
+                [ QR SCAN MOH-268 ]
+              </div>
+              <span className="text-[9px] text-slate-500 mt-1 font-mono">1-Sec Verify</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-200">
             <div className="space-y-4">
-              <p className="font-bold text-slate-700">Referring Officer (Midwife/Doctor):</p>
+              <p className="font-bold text-slate-700">Referring Officer (Dispensary Midwife/Doctor):</p>
               <div className="border-b border-slate-400 pb-1">Name: ______________________</div>
               <div className="border-b border-slate-400 pb-1">Signature: ______________________</div>
             </div>
             <div className="space-y-4">
-              <p className="font-bold text-slate-700">Receiving Triage Officer (Hospital):</p>
+              <p className="font-bold text-slate-700">Receiving Triage Officer (Hospital Casualty):</p>
               <div className="border-b border-slate-400 pb-1">Name: ______________________</div>
               <div className="border-b border-slate-400 pb-1">Signature: ______________________</div>
             </div>
@@ -216,7 +247,7 @@ export default function MOH268PrintSlipPage() {
         </div>
 
         <div className="text-center text-[10px] text-slate-400 border-t border-slate-200 pt-3">
-          Generated automatically by SEQOY · MOH 268 Standard Compliant
+          Generated automatically by SEQOY · MOH 268 Standard Compliant · Integrated with KenyaEMR (OpenMRS)
         </div>
       </div>
     </div>

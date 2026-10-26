@@ -99,9 +99,17 @@ export interface HospitalCapacity {
     "O-": number;
   };
 
+  // CRITICAL KENYAN REALITY: Uncrossmatched units strictly locked for acute PPH/APH hemorrhage
+  unreservedEmergencyONeg: number;
+
   obstetricianOnDuty: boolean;
   anesthesiologistOnDuty: boolean;
   neonatologistOnDuty: boolean;
+  isApexReferralCenter: boolean; // Level 6 apex facilities (KNH, MTRH)
+  hemodialysisAvailable: boolean; // for severe HELLP syndrome with acute kidney injury
+  bloodIrradiationAvailable: boolean;
+  neonatalVentilatorsAvailable: number;
+  dutyStationWhatsappPhone?: string;
 
   // How these numbers get updated: an automated EHR/HIMS webhook push, or a
   // staff member using the manual update screen. Shown honestly instead of a
@@ -124,10 +132,20 @@ export interface FacilityReferral {
   clinicalIndication: string;
   urgencyLevel: "URGENT" | "EMERGENCY" | "CRITICAL_STAT";
 
+  // Acuity Override Protocol (for catastrophic tertiary emergencies at Level 6 Apex)
+  acuityTier?: "ROUTINE" | "EMERGENCY" | "TERTIARY_MANDATORY";
+  isAcuityOverride?: boolean;
+  acuityOverrideReason?: string;
+
   icuBedReserved: boolean;
   theatreReserved: boolean;
   bloodUnitsReserved: number;
   bloodTypeReserved?: string;
+  unreservedBloodReserved?: number;
+
+  // Zero-login WhatsApp Dispatch Telemetry
+  whatsappDispatchStatus?: "NOT_DISPATCHED" | "DISPATCHED" | "ACKNOWLEDGED";
+  whatsappDispatchedAt?: string;
 
   status: "REQUESTED" | "ACKNOWLEDGED" | "ACCEPTED" | "ADMITTED" | "COMPLETED" | "DECLINED";
   preArrivalHandoverNote?: string;
@@ -233,7 +251,7 @@ export const initialFacilities: Facility[] = [
 export const initialCapacities: HospitalCapacity[] = [
   {
     id: 1,
-    facilityId: 2, // Pumwani
+    facilityId: 2, // Pumwani Maternity Hospital
     icuBedsTotal: 8,
     icuBedsAvailable: 3,
     hduBedsTotal: 12,
@@ -243,16 +261,22 @@ export const initialCapacities: HospitalCapacity[] = [
     operatingTheatresAvailable: 2,
     theatreReadinessStatus: "READY",
     bloodStock: { "A+": 6, "A-": 2, "B+": 8, "B-": 1, "AB+": 3, "AB-": 1, "O+": 14, "O-": 4 },
+    unreservedEmergencyONeg: 3, // 3 unreserved emergency O- units strictly available for PPH
     obstetricianOnDuty: true,
     anesthesiologistOnDuty: true,
     neonatologistOnDuty: true,
+    isApexReferralCenter: false,
+    hemodialysisAvailable: false,
+    bloodIrradiationAvailable: false,
+    neonatalVentilatorsAvailable: 6,
+    dutyStationWhatsappPhone: "+254711000202",
     syncMode: "EHR_WEBHOOK",
     lastWebhookSyncAt: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
     lastUpdated: new Date().toISOString(),
   },
   {
     id: 2,
-    facilityId: 3, // KNH (Overcrowded baseline)
+    facilityId: 3, // KNH (Level 6 Apex - Overcrowded baseline but sole Tertiary Rescue)
     icuBedsTotal: 30,
     icuBedsAvailable: 0, // 0 ICU Beds available (Simulates Delay 3 problem!)
     hduBedsTotal: 25,
@@ -262,15 +286,21 @@ export const initialCapacities: HospitalCapacity[] = [
     operatingTheatresAvailable: 0,
     theatreReadinessStatus: "SURGERY_IN_PROGRESS",
     bloodStock: { "A+": 2, "A-": 0, "B+": 3, "B-": 0, "AB+": 1, "AB-": 0, "O+": 5, "O-": 0 },
+    unreservedEmergencyONeg: 0, // 0 unreserved emergency units in fridge
     obstetricianOnDuty: true,
     anesthesiologistOnDuty: true,
     neonatologistOnDuty: true,
+    isApexReferralCenter: true, // Sole Level 6 Apex in Nairobi Corridor
+    hemodialysisAvailable: true, // Emergency dialysis for HELLP / anuria
+    bloodIrradiationAvailable: true,
+    neonatalVentilatorsAvailable: 18,
+    dutyStationWhatsappPhone: "+254711000303",
     syncMode: "MANUAL",
     lastUpdated: new Date().toISOString(),
   },
   {
     id: 3,
-    facilityId: 4, // Kiambu County Referral (Great Alternative!)
+    facilityId: 4, // Kiambu County Referral (Great Secondary/Tertiary Alternative!)
     icuBedsTotal: 6,
     icuBedsAvailable: 4,
     hduBedsTotal: 8,
@@ -280,16 +310,22 @@ export const initialCapacities: HospitalCapacity[] = [
     operatingTheatresAvailable: 2,
     theatreReadinessStatus: "READY",
     bloodStock: { "A+": 8, "A-": 3, "B+": 6, "B-": 2, "AB+": 4, "AB-": 2, "O+": 16, "O-": 5 },
+    unreservedEmergencyONeg: 4,
     obstetricianOnDuty: true,
     anesthesiologistOnDuty: true,
     neonatologistOnDuty: true,
+    isApexReferralCenter: false,
+    hemodialysisAvailable: false,
+    bloodIrradiationAvailable: false,
+    neonatalVentilatorsAvailable: 4,
+    dutyStationWhatsappPhone: "+254711000404",
     syncMode: "EHR_WEBHOOK",
     lastWebhookSyncAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
     lastUpdated: new Date().toISOString(),
   },
   {
     id: 4,
-    facilityId: 5, // Mbagathi
+    facilityId: 5, // Mbagathi County Hospital
     icuBedsTotal: 4,
     icuBedsAvailable: 1,
     hduBedsTotal: 6,
@@ -299,15 +335,21 @@ export const initialCapacities: HospitalCapacity[] = [
     operatingTheatresAvailable: 1,
     theatreReadinessStatus: "READY",
     bloodStock: { "A+": 4, "A-": 1, "B+": 5, "B-": 1, "AB+": 2, "AB-": 0, "O+": 9, "O-": 2 },
+    unreservedEmergencyONeg: 1,
     obstetricianOnDuty: true,
     anesthesiologistOnDuty: true,
     neonatologistOnDuty: false,
+    isApexReferralCenter: false,
+    hemodialysisAvailable: false,
+    bloodIrradiationAvailable: false,
+    neonatalVentilatorsAvailable: 2,
+    dutyStationWhatsappPhone: "+254711000505",
     syncMode: "MANUAL",
     lastUpdated: new Date().toISOString(),
   },
   {
     id: 5,
-    facilityId: 6, // Mama Lucy Kibaki
+    facilityId: 6, // Mama Lucy Kibaki Hospital
     icuBedsTotal: 6,
     icuBedsAvailable: 2,
     hduBedsTotal: 8,
@@ -317,9 +359,15 @@ export const initialCapacities: HospitalCapacity[] = [
     operatingTheatresAvailable: 1,
     theatreReadinessStatus: "READY",
     bloodStock: { "A+": 5, "A-": 2, "B+": 7, "B-": 2, "AB+": 3, "AB-": 1, "O+": 11, "O-": 3 },
+    unreservedEmergencyONeg: 2,
     obstetricianOnDuty: true,
     anesthesiologistOnDuty: true,
     neonatologistOnDuty: true,
+    isApexReferralCenter: false,
+    hemodialysisAvailable: false,
+    bloodIrradiationAvailable: false,
+    neonatalVentilatorsAvailable: 4,
+    dutyStationWhatsappPhone: "+254711000606",
     syncMode: "MANUAL",
     lastUpdated: new Date().toISOString(),
   }
