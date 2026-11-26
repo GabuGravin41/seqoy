@@ -1,37 +1,14 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { DM_Sans, Fraunces, Manrope } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { TelephonyProvider } from '@/context/TelephonyContext';
 
-// Every route here is either behind Clerk auth or reads per-request session
-// state — there's no benefit to statically prerendering any of it at build
-// time, and doing so requires a real Clerk key to even be present at build.
+// Every route here is either behind session auth or reads per-request session
+// state — no benefit to statically prerendering at build time.
 export const dynamic = 'force-dynamic';
-
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-dm-sans',
-  display: 'swap',
-});
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-fraunces',
-  display: 'swap',
-});
-
-const manrope = Manrope({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-manrope',
-  display: 'swap',
-});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -55,8 +32,14 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${fraunces.variable} ${manrope.variable}`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -72,7 +55,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${manrope.className} min-h-screen bg-background text-foreground antialiased selection:bg-scarlet selection:text-white`}>
+      <body className="font-manrope min-h-screen bg-background text-foreground antialiased selection:bg-scarlet selection:text-white">
         <ThemeProvider>
           <AuthProvider>
             <TelephonyProvider>
