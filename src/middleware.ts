@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/auth/session-edge";
 
 const PUBLIC_PREFIXES = [
   "/sign-in",
