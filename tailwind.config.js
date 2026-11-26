@@ -41,20 +41,49 @@ module.exports = {
         moderate: 'var(--moderate)',
         low: 'var(--low)',
         info: 'var(--info)',
-        // SEQOY Pastel Clinical Tokens (from care-connect-network)
-        brand: '#7c89f2',
-        'brand-deep': '#5b6be0',
-        ink: '#232838',
-        'ink-soft': '#5a6379',
+        // seqoy Official Brand Palette: Pulse Crimson, Deep Navy, Pure White
+        scarlet: {
+          DEFAULT: '#A61C26',
+          deep: '#87151E',
+          bright: '#BE2324',
+          soft: '#FDF2F3',
+        },
+        crimson: {
+          DEFAULT: '#A61C26',
+          deep: '#87151E',
+          bright: '#BE2324',
+          soft: '#FDF2F3',
+          border: '#F3D0D3',
+        },
+        navy: {
+          DEFAULT: '#1F274B',
+          deep: '#111828',
+          muted: '#475569',
+          soft: '#EEF1F7',
+          border: '#D4DBE8',
+        },
+        // Alias mapped to Deep Navy so no legacy green leaks anywhere
+        jungle: {
+          DEFAULT: '#1F274B',
+          deep: '#111828',
+          muted: '#475569',
+          soft: '#EEF1F7',
+          border: '#D4DBE8',
+        },
+        // Legacy / clinical app tokens aligned to brand palette
+        brand: '#A61C26',
+        'brand-deep': '#87151E',
+        ink: '#1F274B',
+        'ink-soft': '#475569',
         lilac: '#eeeafe',
-        mint: '#dff5ec',
+        mint: '#EEF1F7',
         peach: '#feebdf',
-        blush: '#f7dde6',
+        blush: '#FDF2F3',
         butter: '#fbf3d6',
-        canvas: '#fcfbf9',
-        'emerald-soft': '#34d399',
-        'amber-soft': '#f59e0b',
-        'rose-soft': '#f43f5e',
+        canvas: '#F8FAFC',
+        'emerald-soft': '#1F274B',
+        'amber-soft': '#d97706',
+        'rose-soft': '#A61C26',
       },
       borderRadius: {
         DEFAULT: 'var(--radius)',
@@ -65,6 +94,7 @@ module.exports = {
       fontFamily: {
         sans: ['var(--font-dm-sans)', 'sans-serif'],
         display: ['var(--font-fraunces)', 'Georgia', 'serif'],
+        manrope: ['var(--font-manrope)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         floaty: {
@@ -79,11 +109,16 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
         },
+        pulseTravel: {
+          '0%': { strokeDashoffset: '520' },
+          '100%': { strokeDashoffset: '0' },
+        },
       },
       animation: {
         floaty: 'floaty 9s ease-in-out infinite',
         'floaty-2': 'floaty2 11s ease-in-out infinite',
         'floaty-card': 'floatyCard 7s ease-in-out infinite',
+        'pulse-travel': 'pulseTravel 5s ease-in-out infinite',
       },
     },
   },

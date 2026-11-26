@@ -1,10 +1,13 @@
 import { evaluateClinicalRisk } from "../src/lib/clinical/risk-scorer";
 import { handleUSSDSession } from "../src/lib/ussd/state-machine";
 import { parseVoiceTranscription } from "../src/lib/voice/ai-agent";
-import { matchReferralHospitals } from "../src/lib/routing/capacity-matcher";
+import { matchReferralHospitals, evaluateCapacityFreshness } from "../src/lib/routing/capacity-matcher";
+import { parseShiftCapacityMessage } from "../src/lib/routing/shift-capacity-parser";
 import { generateCountyMPDSRReport } from "../src/lib/analytics/mpdsr";
 import { initialFacilities, initialCapacities, initialMPDSRLogs } from "../src/db/mock-store";
 import { hasPermission } from "../src/lib/rbac/permissions";
+import { toPatientInitials, redactPiiForExternalLlm, hasActiveOutreachConsent } from "../src/lib/security/privacy";
+import { KenyaEMRConnector } from "../src/lib/interoperability/kenyaemr_connector";
 
 let testsPassed = 0;
 let testsFailed = 0;
@@ -195,6 +198,60 @@ const emergencyTwiML = generateTriageResultTwiML({
 assert(
   emergencyTwiML.includes("dalili za hatari") && emergencyTwiML.includes("<Hangup/>"),
   "Twilio Triage Result generates emergency audio guidance and clean hangup"
+);
+
+// 8. Capacity Freshness, Shift SMS Parser, ODPC Privacy & KenyaEMR Hardening
+console.log("\n8️⃣ Testing Staleness, Shift SMS Updates, ODPC Privacy & KenyaEMR Security...");
+
+const freshCheck = evaluateCapacityFreshness(new Date(Date.now() - 2 * 60 * 60 * 1000));
+const staleCheck = evaluateCapacityFreshness(new Date(Date.now() - 36 * 60 * 60 * 1000));
+assert(
+  freshCheck.freshnessStatus === "FRESH" && staleCheck.freshnessStatus === "STALE",
+  "Capacity freshness evaluator distinguishes FRESH (<=12h) from STALE (>24h)"
+);
+
+const parsedShift = parseShiftCapacityMessage("CAP ICU=2 HDU=3 THEATRE=READY ONEG=5 OB=Y");
+assert(
+  parsedShift.isShiftUpdate &&
+    parsedShift.patch.icuBedsAvailable === 2 &&
+    parsedShift.patch.unreservedEmergencyONeg === 5 &&
+    parsedShift.patch.theatreReadinessStatus === "READY",
+  "Shift SMS parser extracts ICU beds, emergency O-negative stock, and theatre readiness"
+);
+
+const parsedStrike = parseShiftCapacityMessage("CAP STRIKE");
+assert(
+  parsedStrike.isShiftUpdate &&
+    parsedStrike.patch.theatreReadinessStatus === "SHORT_STAFFED" &&
+    parsedStrike.patch.operatingTheatresAvailable === 0,
+  "Shift SMS parser activates strike-resilient SHORT_STAFFED closure mode"
+);
+
+assert(
+  toPatientInitials("Wanjiku Muthoni") === "W. M.",
+  "ODPC data minimization converts full patient names to initials for WhatsApp dispatch"
+);
+
+const scrubbed = redactPiiForExternalLlm("Patient +254712345678 ID 29481022 email mama@example.com has headache");
+assert(
+  !scrubbed.includes("254712345678") &&
+    !scrubbed.includes("29481022") &&
+    !scrubbed.includes("mama@example.com") &&
+    scrubbed.includes("headache"),
+  "ODPC LLM guard redacts phone numbers, National IDs, and emails while preserving clinical symptoms"
+);
+
+assert(
+  hasActiveOutreachConsent({ consentStatus: "GRANTED" }) === true &&
+    hasActiveOutreachConsent({ consentStatus: "REVOKED" }) === false &&
+    hasActiveOutreachConsent({ consentStatus: "PENDING" }) === false,
+  "ODPC consent guard blocks automated outreach for REVOKED and PENDING patients"
+);
+
+const unconfiguredEmr = new KenyaEMRConnector({ baseUrl: "", username: "", password: "" });
+assert(
+  !unconfiguredEmr.isConfigured(),
+  "KenyaEMRConnector refuses to activate without explicit credentials (no default admin/Admin123)"
 );
 
 triggerOutboundTriageCall({

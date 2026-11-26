@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Metadata, Viewport } from 'next';
-import { DM_Sans, Fraunces } from 'next/font/google';
-import { ClerkProvider } from '@clerk/nextjs';
+import { DM_Sans, Fraunces, Manrope } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/context/ThemeContext';
@@ -27,17 +26,28 @@ const fraunces = Fraunces({
   display: 'swap',
 });
 
+const manrope = Manrope({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-manrope',
+  display: 'swap',
+});
+
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: 'SEQOY — Early Warning & Facility Readiness for Maternal Care',
+  title: 'seqoy — Maternal Early Warning & Hospital Readiness Network',
   description:
-    'SEQOY reaches every enrolled mother with automatic biweekly calls and weekly WhatsApp/SMS check-ins, and gives clinics live hospital bed and blood capacity so they never refer a mother somewhere already full.',
+    'seqoy closes Delay 1 and Delay 3 in Kenyan maternal care: SMS & direct midwife outreach catch danger signs early, while live bed, theatre, and O-negative blood readiness stops blind hospital referrals.',
   icons: {
-    icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -45,7 +55,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${dmSans.variable} ${fraunces.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${dmSans.variable} ${fraunces.variable} ${manrope.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -62,33 +72,24 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${dmSans.className} min-h-screen bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground`}>
-        <ClerkProvider
-          appearance={{
-            variables: {
-              colorPrimary: '#0f766e',
-              borderRadius: '0.75rem',
-            },
-          }}
-        >
-          <ThemeProvider>
-            <AuthProvider>
-              <TelephonyProvider>
-                {children}
-                <Toaster
-                  position="bottom-right"
-                  toastOptions={{
-                    style: {
-                      background: 'var(--card)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--foreground)',
-                    },
-                  }}
-                />
-              </TelephonyProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </ClerkProvider>
+      <body className={`${manrope.className} min-h-screen bg-background text-foreground antialiased selection:bg-scarlet selection:text-white`}>
+        <ThemeProvider>
+          <AuthProvider>
+            <TelephonyProvider>
+              {children}
+              <Toaster
+                position="bottom-right"
+                toastOptions={{
+                  style: {
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--foreground)',
+                  },
+                }}
+              />
+            </TelephonyProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

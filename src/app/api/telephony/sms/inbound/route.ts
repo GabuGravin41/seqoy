@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { extractSymptomsFromTranscript } from "@/lib/ai/extractSymptoms";
 import * as patientsRepo from "@/db/repository/patients";
 import * as checkinsRepo from "@/db/repository/checkins";
+import * as capacitiesRepo from "@/db/repository/capacities";
+import * as facilitiesRepo from "@/db/repository/facilities";
 import { verifySharedSecret } from "@/lib/security/webhookAuth";
+import { parseShiftCapacityMessage } from "@/lib/routing/shift-capacity-parser";
+import { logAudit } from "@/lib/security/audit";
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/[\s\-()]/g, "");
+}
 
 /**
- * Africa's Talking inbound SMS webhook — the reply half of the weekly Delay-1
- * message for mothers without WhatsApp. Posts as application/x-www-form-urlencoded
- * with `from` and `text` fields.
+ * Africa's Talking inbound SMS webhook:
+ * 1. Delay 3 shift capacity updates from registered hospital duty-station phones
+ *    (e.g. "CAP ICU=2 THEATRE=READY ONEG=4" or "CAP STRIKE").
+ * 2. Delay 1 symptom check-in replies from expectant mothers.
  */
 export async function POST(req: NextRequest) {
   if (!verifySharedSecret(req, "SMS_WEBHOOK_SECRET")) {
@@ -27,6 +36,48 @@ export async function POST(req: NextRequest) {
       const body = await req.json();
       fromNumber = body.from || "";
       text = body.text || "";
+    }
+
+    // 1. Check if this is a hospital duty-station shift capacity update
+    const shiftUpdate = parseShiftCapacityMessage(text);
+    if (shiftUpdate.isShiftUpdate) {
+      const normalizedFrom = normalizePhone(fromNumber);
+      const [capacities, facilities] = await Promise.all([
+        capacitiesRepo.listCapacities(),
+        facilitiesRepo.listFacilities(),
+      ]);
+
+      const matchedCapacity = capacities.find(
+        (c) => c.dutyStationWhatsappPhone && normalizePhone(c.dutyStationWhatsappPhone) === normalizedFrom
+      );
+      const matchedFacility = matchedCapacity
+        ? facilities.find((f) => f.id === matchedCapacity.facilityId)
+        : facilities.find((f) => f.isReferralCenter && normalizePhone(f.emergencyPhone) === normalizedFrom);
+
+      if (!matchedFacility) {
+        return NextResponse.json(
+          { error: "Sender phone is not a registered hospital duty station" },
+          { status: 403 }
+        );
+      }
+
+      const updated = await capacitiesRepo.updateCapacity(matchedFacility.id, shiftUpdate.patch);
+      await logAudit(
+        { userId: `sms:${normalizedFrom}`, role: "BED_MANAGER" },
+        "CAPACITY_SHIFT_SMS_UPDATE",
+        "facility",
+        String(matchedFacility.id),
+        { summary: shiftUpdate.summary }
+      );
+
+      return NextResponse.json({
+        success: true,
+        type: "SHIFT_CAPACITY_UPDATE",
+        facilityId: matchedFacility.id,
+        facilityName: matchedFacility.name,
+        summary: shiftUpdate.summary,
+        lastUpdated: updated?.lastUpdated,
+      });
     }
 
     const patient = await patientsRepo.findPatientByPhone(fromNumber);

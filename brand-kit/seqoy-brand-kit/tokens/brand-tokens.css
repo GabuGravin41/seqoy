@@ -1,0 +1,31 @@
+/* seqoy Brand Design Tokens */
+
+:root {
+  /* Brand Colors (Light Mode) */
+  --seqoy-crimson: #A61C26;
+  --seqoy-navy: #1F274B;
+  --seqoy-surface: #FFFFFF;
+  --seqoy-surface-subtle: #F8FAFC;
+  --seqoy-text-primary: #1F274B;
+  --seqoy-text-muted: #475569;
+
+  /* Typography */
+  --seqoy-font-display: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  --seqoy-wordmark-tracking: -0.02em;
+  --seqoy-wordmark-weight: 600;
+
+  /* Logo Sizing & Clear Space */
+  --seqoy-logo-min-height: 32px;
+  --seqoy-logo-clear-space: 25%;
+}
+
+[data-theme="dark"],
+.dark {
+  --seqoy-crimson: #BE2324;
+  --seqoy-crimson-ui: #DC2626;
+  --seqoy-navy: #FFFFFF;
+  --seqoy-surface: #111828;
+  --seqoy-surface-subtle: #0F172A;
+  --seqoy-text-primary: #F8FAFC;
+  --seqoy-text-muted: #94A3B8;
+}

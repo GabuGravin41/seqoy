@@ -85,6 +85,7 @@ export interface CapacityUpdateInput {
   operatingTheatresAvailable?: number;
   theatreReadinessStatus?: HospitalCapacity["theatreReadinessStatus"];
   bloodStock?: Partial<HospitalCapacity["bloodStock"]>;
+  unreservedEmergencyONeg?: number;
   obstetricianOnDuty?: boolean;
   anesthesiologistOnDuty?: boolean;
   neonatologistOnDuty?: boolean;
@@ -109,6 +110,8 @@ export async function updateCapacity(
       capacity.operatingTheatresAvailable = patch.operatingTheatresAvailable;
     if (patch.theatreReadinessStatus !== undefined) capacity.theatreReadinessStatus = patch.theatreReadinessStatus;
     if (patch.bloodStock) capacity.bloodStock = { ...capacity.bloodStock, ...patch.bloodStock };
+    if (patch.unreservedEmergencyONeg !== undefined)
+      capacity.unreservedEmergencyONeg = patch.unreservedEmergencyONeg;
     if (patch.obstetricianOnDuty !== undefined) capacity.obstetricianOnDuty = patch.obstetricianOnDuty;
     if (patch.anesthesiologistOnDuty !== undefined) capacity.anesthesiologistOnDuty = patch.anesthesiologistOnDuty;
     if (patch.neonatologistOnDuty !== undefined) capacity.neonatologistOnDuty = patch.neonatologistOnDuty;
@@ -129,6 +132,8 @@ export async function updateCapacity(
     values.operatingTheatresAvailable = patch.operatingTheatresAvailable;
   if (patch.theatreReadinessStatus !== undefined) values.theatreReadinessStatus = patch.theatreReadinessStatus;
   if (patch.bloodStock) Object.assign(values, bloodStockColumns(patch.bloodStock));
+  if (patch.unreservedEmergencyONeg !== undefined)
+    values.unreservedEmergencyONeg = patch.unreservedEmergencyONeg;
   if (patch.obstetricianOnDuty !== undefined) values.obstetricianOnDuty = patch.obstetricianOnDuty;
   if (patch.anesthesiologistOnDuty !== undefined) values.anesthesiologistOnDuty = patch.anesthesiologistOnDuty;
   if (patch.neonatologistOnDuty !== undefined) values.neonatologistOnDuty = patch.neonatologistOnDuty;

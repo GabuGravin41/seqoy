@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
-import { useUser } from '@clerk/nextjs';
 import { UserRole, RolePermissions, ROLE_PERMISSIONS } from '@/lib/rbac/permissions';
 
 export type { UserRole };
@@ -101,6 +100,7 @@ interface AuthContextType {
   isLoading: boolean;
   canAccessRoute: (pathname: string) => boolean;
   refreshProfile: () => void;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -111,25 +111,18 @@ function initialsFromName(name: string): string {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { user, isLoaded: clerkLoaded } = useUser();
   const [profile, setProfile] = useState<RemoteProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
-    if (!clerkLoaded) return;
-    if (!user) {
-      setProfile(null);
-      setLoadingProfile(false);
-      return;
-    }
     setLoadingProfile(true);
     fetch('/api/me')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => setProfile(data?.profile ?? null))
       .catch(() => setProfile(null))
       .finally(() => setLoadingProfile(false));
-  }, [clerkLoaded, user, refreshTick]);
+  }, [refreshTick]);
 
   const currentUser: CurrentUser | null = useMemo(() => {
     if (!profile) return null;
@@ -157,13 +150,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return allowed.some((route) => (route === '/' ? pathname === '/' : pathname.startsWith(route)));
   };
 
+  const signOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setProfile(null);
+    window.location.href = '/sign-in';
+  };
+
   return (
     <AuthContext.Provider
       value={{
         currentUser,
-        isLoading: !clerkLoaded || loadingProfile,
+        isLoading: loadingProfile,
         canAccessRoute,
         refreshProfile: () => setRefreshTick((t) => t + 1),
+        signOut,
       }}
     >
       {children}

@@ -12,20 +12,20 @@ interface MetricCardProps {
   className?: string;
 }
 
-const variantStyles = {
-  default: 'bg-card border-border card-glow-primary',
-  critical: 'bg-card border-critical/30 card-glow-critical',
-  warning: 'bg-card border-accent/30 card-glow-warning',
-  positive: 'bg-card border-primary/30 card-glow-primary',
-  hero: 'bg-gradient-to-br from-primary/10 to-card border-primary/20 card-glow-primary',
+const topAccentStyles = {
+  default: 'border-t-2 border-t-foreground/80',
+  critical: 'border-t-2 border-t-scarlet',
+  warning: 'border-t-2 border-t-amber-600',
+  positive: 'border-t-2 border-t-jungle',
+  hero: 'border-t-2 border-t-scarlet',
 };
 
-const iconBgStyles = {
-  default: 'bg-muted text-muted-foreground',
-  critical: 'bg-critical/15 text-critical',
-  warning: 'bg-accent/15 text-accent',
-  positive: 'bg-primary/15 text-primary',
-  hero: 'bg-primary/20 text-primary',
+const iconColorStyles = {
+  default: 'text-muted-foreground',
+  critical: 'text-scarlet',
+  warning: 'text-amber-600',
+  positive: 'text-jungle',
+  hero: 'text-scarlet',
 };
 
 export default function MetricCard({
@@ -39,19 +39,24 @@ export default function MetricCard({
   className = '',
 }: MetricCardProps) {
   return (
-    <div className={`rounded-xl border p-5 flex flex-col gap-3 ${variantStyles[variant]} ${className}`}>
-      <div className="flex items-start justify-between">
+    <div
+      className={`rounded-md border border-border bg-card p-5 flex flex-col gap-3 ${topAccentStyles[variant]} ${className}`}
+    >
+      <div className="flex items-center justify-between gap-2">
         <p className="stat-label">{label}</p>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconBgStyles[variant]}`}>
-          <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={18} variant={iconVariant} />
-        </div>
+        <Icon
+          name={icon as Parameters<typeof Icon>[0]['name']}
+          size={16}
+          variant={iconVariant}
+          className={iconColorStyles[variant]}
+        />
       </div>
       <div>
-        <p className="text-hero-metric font-tabular">{value}</p>
+        <p className="text-hero-metric font-tabular text-foreground">{value}</p>
         {subtext && <p className="text-xs text-muted-foreground mt-1">{subtext}</p>}
       </div>
       {trend && (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 pt-1 border-t border-border/60">
           <Icon
             name={
               trend.direction === 'up' ? 'ArrowUpIcon' : trend.direction === 'down' ? 'ArrowDownIcon' : 'MinusIcon'
@@ -63,24 +68,24 @@ export default function MetricCard({
                 ? 'text-muted-foreground'
                 : trend.positive
                 ? trend.direction === 'up'
-                  ? 'text-primary'
-                  : 'text-critical'
+                  ? 'text-jungle'
+                  : 'text-scarlet'
                 : trend.direction === 'up'
-                ? 'text-critical'
-                : 'text-primary'
+                ? 'text-scarlet'
+                : 'text-jungle'
             }
           />
           <span
-            className={`text-xs font-medium ${
+            className={`text-xs font-semibold ${
               trend.direction === 'neutral'
                 ? 'text-muted-foreground'
                 : trend.positive
                 ? trend.direction === 'up'
-                  ? 'text-primary'
-                  : 'text-critical'
+                  ? 'text-jungle'
+                  : 'text-scarlet'
                 : trend.direction === 'up'
-                ? 'text-critical'
-                : 'text-primary'
+                ? 'text-scarlet'
+                : 'text-jungle'
             }`}
           >
             {trend.value}

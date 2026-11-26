@@ -26,6 +26,10 @@ function rowToPatient(row: typeof schema.patients.$inferSelect): Patient {
     whatsappNumber: row.whatsappNumber ?? undefined,
     nextCallAt: row.nextCallAt ? row.nextCallAt.toISOString() : undefined,
     nextWeeklyMessageAt: row.nextWeeklyMessageAt ? row.nextWeeklyMessageAt.toISOString() : undefined,
+    consentStatus: (row.consentStatus as Patient["consentStatus"]) ?? "GRANTED",
+    consentRecordedAt: row.consentRecordedAt ? row.consentRecordedAt.toISOString() : undefined,
+    consentChannel: (row.consentChannel as Patient["consentChannel"]) ?? "VERBAL_CLINIC",
+    consentVersion: row.consentVersion ?? "ODPC-2026-v1",
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -77,6 +81,9 @@ export interface NewPatientInput {
   preferredCheckinHour?: number;
   contactChannel?: Patient["contactChannel"];
   whatsappNumber?: string;
+  consentStatus?: Patient["consentStatus"];
+  consentChannel?: Patient["consentChannel"];
+  consentVersion?: string;
 }
 
 export async function createPatient(input: NewPatientInput): Promise<Patient> {
@@ -88,6 +95,10 @@ export async function createPatient(input: NewPatientInput): Promise<Patient> {
   };
   const { nextCallAt, nextWeeklyMessageAt } = computeInitialSchedule(schedule);
   const contactChannel = input.contactChannel ?? (input.whatsappNumber ? "WHATSAPP" : "SMS");
+  const consentStatus = input.consentStatus ?? "GRANTED";
+  const consentChannel = input.consentChannel ?? "VERBAL_CLINIC";
+  const consentVersion = input.consentVersion ?? "ODPC-2026-v1";
+  const consentRecordedAt = new Date();
 
   if (!db) {
     const newPatient: Patient = {
@@ -109,6 +120,10 @@ export async function createPatient(input: NewPatientInput): Promise<Patient> {
       whatsappNumber: input.whatsappNumber,
       nextCallAt: nextCallAt.toISOString(),
       nextWeeklyMessageAt: nextWeeklyMessageAt.toISOString(),
+      consentStatus,
+      consentRecordedAt: consentRecordedAt.toISOString(),
+      consentChannel,
+      consentVersion,
       createdAt: new Date().toISOString(),
     };
     mockStore.patients.unshift(newPatient);
@@ -135,6 +150,10 @@ export async function createPatient(input: NewPatientInput): Promise<Patient> {
       whatsappNumber: input.whatsappNumber,
       nextCallAt,
       nextWeeklyMessageAt,
+      consentStatus,
+      consentRecordedAt,
+      consentChannel,
+      consentVersion,
     })
     .returning();
   return rowToPatient(row);

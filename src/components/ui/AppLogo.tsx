@@ -3,28 +3,42 @@ import React from 'react';
 interface AppLogoProps {
   size?: number;
   className?: string;
+  forceDark?: boolean;
 }
 
-export default function AppLogo({ size = 32, className = '' }: AppLogoProps) {
+/**
+ * Official seqoy brand mark.
+ * Automatically switches between primary (light bg) and dark-mode (dark bg)
+ * transparent exports with zero drop shadows or outer glows per BRAND_GUIDELINES.md.
+ */
+export default function AppLogo({ size = 34, className = '', forceDark = false }: AppLogoProps) {
+  const height = Math.max(32, size);
+
+  if (forceDark) {
+    return (
+      <img
+        src="/brand/seqoy-logo-dark-transparent.png"
+        alt="seqoy"
+        style={{ height, width: 'auto' }}
+        className={`object-contain select-none ${className}`}
+      />
+    );
+  }
+
   return (
-    <div
-      className={`rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center text-primary font-bold shadow-sm ${className}`}
-      style={{ width: size, height: size }}
-    >
-      <svg
-        width={size * 0.65}
-        height={size * 0.65}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-        <path d="M12 5v14" />
-        <path d="M5 12h14" />
-      </svg>
-    </div>
+    <>
+      <img
+        src="/brand/seqoy-logo-primary-transparent.png"
+        alt="seqoy"
+        style={{ height, width: 'auto' }}
+        className={`block dark:hidden object-contain select-none ${className}`}
+      />
+      <img
+        src="/brand/seqoy-logo-dark-transparent.png"
+        alt="seqoy"
+        style={{ height, width: 'auto' }}
+        className={`hidden dark:block object-contain select-none ${className}`}
+      />
+    </>
   );
 }

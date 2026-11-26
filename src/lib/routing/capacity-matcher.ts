@@ -12,6 +12,8 @@ export interface ReferralRequirement {
   isHemorrhageEmergency?: boolean;
 }
 
+export type CapacityFreshness = "FRESH" | "AGING" | "STALE";
+
 export interface MatchedHospital {
   facility: Facility;
   capacity: HospitalCapacity;
@@ -27,6 +29,32 @@ export interface MatchedHospital {
   unreservedEmergencyONeg: number;
   bloodReservationWarning?: string;
   dutyStationWhatsappPhone?: string;
+  dataAgeHours: number;
+  freshnessStatus: CapacityFreshness;
+}
+
+/**
+ * Evaluates how fresh a facility's reported bed/theatre/blood capacity is.
+ * Prevents routing mothers based on stale multi-day-old counts.
+ * - FRESH: <= 12 hours (one standard clinical shift)
+ * - AGING: 12-24 hours (soft warning; verify if critical)
+ * - STALE: > 24 hours (penalty + explicit phone verification warning)
+ */
+export function evaluateCapacityFreshness(
+  lastUpdated: string | Date | undefined,
+  now: Date = new Date()
+): { ageHours: number; freshnessStatus: CapacityFreshness } {
+  if (!lastUpdated) {
+    return { ageHours: 999, freshnessStatus: "STALE" };
+  }
+  const updatedMs = new Date(lastUpdated).getTime();
+  if (Number.isNaN(updatedMs)) {
+    return { ageHours: 999, freshnessStatus: "STALE" };
+  }
+  const ageHours = Math.max(0, Math.round(((now.getTime() - updatedMs) / (1000 * 60 * 60)) * 10) / 10);
+  if (ageHours <= 12) return { ageHours, freshnessStatus: "FRESH" };
+  if (ageHours <= 24) return { ageHours, freshnessStatus: "AGING" };
+  return { ageHours, freshnessStatus: "STALE" };
 }
 
 // Calculate Great Circle Distance in KM (Haversine formula)
@@ -156,12 +184,16 @@ export function matchReferralHospitals(
       }
     }
 
-    // Check Theatre requirement
+    // Check Theatre requirement (treat SURGERY_IN_PROGRESS, STERILIZING, and SHORT_STAFFED/strike as unavailable)
     if (req.theatreNeeded) {
-      if (capacity.operatingTheatresAvailable < 1 || capacity.theatreReadinessStatus === "SURGERY_IN_PROGRESS") {
+      if (capacity.operatingTheatresAvailable < 1 || capacity.theatreReadinessStatus !== "READY") {
         if (!isAcuityOverride) {
           isCapable = false;
-          bottlenecks.push("Operating Theatre occupied/unavailable");
+          bottlenecks.push(
+            capacity.theatreReadinessStatus === "SHORT_STAFFED"
+              ? "Operating Theatre closed / short-staffed (strike or staffing gap)"
+              : `Operating Theatre unavailable (${capacity.theatreReadinessStatus})`
+          );
           score -= 40;
         } else {
           bottlenecks.push("Emergency Theatre queue active; pre-arrival alert clears emergency C-Section table");
@@ -210,6 +242,20 @@ export function matchReferralHospitals(
       score -= 20;
     }
 
+    // Check Capacity Data Freshness (anti-stale-dashboard safeguard)
+    const { ageHours: dataAgeHours, freshnessStatus } = evaluateCapacityFreshness(capacity.lastUpdated);
+    if (freshnessStatus === "STALE") {
+      bottlenecks.push(`Capacity data is stale (last updated ${dataAgeHours}h ago — confirm by phone before transfer)`);
+      if (!isAcuityOverride) {
+        score -= 30;
+      }
+    } else if (freshnessStatus === "AGING") {
+      bottlenecks.push(`Capacity data aging (${dataAgeHours}h since last shift update)`);
+      if (!isAcuityOverride) {
+        score -= 10;
+      }
+    }
+
     // Distance penalty
     score -= distKm * 1.5;
 
@@ -217,7 +263,8 @@ export function matchReferralHospitals(
     if (isAcuityOverride) {
       matchingSummary = `APEX ACUITY OVERRIDE: Tertiary surgical/dialysis intervention authorized at ${facility.name} despite census saturation. Pre-arrival emergency alert sent. ETA: ~${driveMinutes} mins.`;
     } else if (isCapable) {
-      matchingSummary = `CONFIRMED CAPACITY: ${capacity.icuBedsAvailable} ICU beds, ${capacity.operatingTheatresAvailable} Theatre ready, ${unreservedEmergencyONeg} unreserved emergency O- units. ETA: ~${driveMinutes} mins.`;
+      const staleTag = freshnessStatus === "STALE" ? " [VERIFY BY PHONE — STALE DATA]" : "";
+      matchingSummary = `CONFIRMED CAPACITY${staleTag}: ${capacity.icuBedsAvailable} ICU beds, ${capacity.operatingTheatresAvailable} Theatre ready, ${unreservedEmergencyONeg} unreserved emergency O- units. ETA: ~${driveMinutes} mins.`;
     } else {
       matchingSummary = `CAPACITY BLOCKED: ${bottlenecks.join("; ")}`;
     }
@@ -237,6 +284,8 @@ export function matchReferralHospitals(
       unreservedEmergencyONeg,
       bloodReservationWarning,
       dutyStationWhatsappPhone: capacity.dutyStationWhatsappPhone,
+      dataAgeHours,
+      freshnessStatus,
     };
   });
 

@@ -1,6 +1,14 @@
+import crypto from "crypto";
 import { NextRequest } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getServerSession } from "@/lib/auth/session";
 import twilio from "twilio";
+
+function constantTimeEquals(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 /**
  * Shared-secret verification for inbound webhooks that aren't signed by their
@@ -13,11 +21,30 @@ export function verifySharedSecret(req: NextRequest, envVarName: string): boolea
   const expected = process.env[envVarName];
   if (!expected) {
     // No secret configured (e.g. local dev without env vars set) — allow
-    // through, matching the rest of the app's offline-friendly dev mode.
+    // through in non-production only; fail closed in production.
     return process.env.NODE_ENV !== "production";
   }
-  const provided = req.headers.get("x-seqoy-webhook-secret") || new URL(req.url).searchParams.get("secret");
-  return provided === expected;
+  const provided =
+    req.headers.get("x-seqoy-webhook-secret") ||
+    new URL(req.url).searchParams.get("secret") ||
+    "";
+  return provided.length > 0 && constantTimeEquals(provided, expected);
+}
+
+/**
+ * Fail-closed Bearer token verification for scheduled cron endpoints.
+ * In production, CRON_SECRET MUST be configured — never fail open.
+ */
+export function verifyCronSecret(req: NextRequest): boolean {
+  const expected = process.env.CRON_SECRET;
+  if (!expected) {
+    return process.env.NODE_ENV !== "production";
+  }
+  const authHeader = req.headers.get("authorization") || "";
+  const prefix = "Bearer ";
+  if (!authHeader.startsWith(prefix)) return false;
+  const provided = authHeader.slice(prefix.length);
+  return provided.length > 0 && constantTimeEquals(provided, expected);
 }
 
 /**
@@ -27,8 +54,8 @@ export function verifySharedSecret(req: NextRequest, envVarName: string): boolea
  */
 export async function verifySharedSecretOrSession(req: NextRequest, envVarName: string): Promise<boolean> {
   if (verifySharedSecret(req, envVarName)) return true;
-  const { userId } = await auth();
-  return Boolean(userId);
+  const session = await getServerSession();
+  return Boolean(session?.userId);
 }
 
 /** Verifies Twilio's request signature using the official helper. */

@@ -44,24 +44,24 @@ export default function Modal({
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
         aria-hidden="true"
       />
 
       {/* Dialog Frame */}
       <div
-        className={`relative w-full ${sizeClasses[size]} bg-card border border-border rounded-2xl shadow-2xl p-6 z-10 space-y-4 max-h-[90vh] overflow-y-auto scrollbar-thin fade-in`}
+        className={`relative w-full ${sizeClasses[size]} bg-card border border-border rounded-md shadow-xl p-6 z-10 space-y-5 max-h-[90vh] overflow-y-auto scrollbar-thin fade-in`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-border">
           <div>
-            <h3 className="text-lg font-bold text-foreground">{title}</h3>
-            {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+            <h3 className="text-lg font-extrabold tracking-[-0.02em] text-foreground">{title}</h3>
+            {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
             aria-label="Close dialog"
           >
             <Icon name="XMarkIcon" size={18} variant="outline" />

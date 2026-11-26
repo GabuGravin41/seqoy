@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from '@/lib/auth/session';
+import { redactPiiForExternalLlm } from '@/lib/security/privacy';
 
 const API_KEYS: Record<string, string | undefined> = {
   OPEN_AI: process.env.OPENAI_API_KEY,
@@ -35,6 +37,11 @@ async function* generateClinicalStream(messages: any[]): AsyncGenerator<string> 
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   let body: any = {};
 
   try {
@@ -50,13 +57,18 @@ export async function POST(request: NextRequest) {
 
     const apiKey = API_KEYS[provider?.toUpperCase()] || API_KEYS.ANTHROPIC || API_KEYS.GEMINI || API_KEYS.OPENAI;
 
-    // 1. If Anthropic API Key is available, call Anthropic API directly
+    // 1. If Anthropic API Key is available, call Anthropic API directly (with ODPC PII redaction)
     if (apiKey && apiKey.startsWith('sk-ant-') && (provider.toUpperCase() === 'ANTHROPIC' || model.includes('claude'))) {
       try {
-        const systemMsg = messages.find((m: any) => m.role === 'system')?.content || '';
+        const systemMsg = redactPiiForExternalLlm(
+          messages.find((m: any) => m.role === 'system')?.content || ''
+        );
         const conversationMsgs = messages
           .filter((m: any) => m.role !== 'system')
-          .map((m: any) => ({ role: m.role, content: m.content }));
+          .map((m: any) => ({
+            role: m.role,
+            content: typeof m.content === 'string' ? redactPiiForExternalLlm(m.content) : m.content,
+          }));
 
         if (conversationMsgs.length === 0) {
           conversationMsgs.push({ role: 'user', content: 'Hello' });
@@ -70,7 +82,7 @@ export async function POST(request: NextRequest) {
             'content-type': 'application/json',
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
+            model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
             max_tokens: 1024,
             system: systemMsg,
             messages: conversationMsgs,

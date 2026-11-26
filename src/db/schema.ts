@@ -43,6 +43,12 @@ export const patients = pgTable("patients", {
   nextCallAt: timestamp("next_call_at"),
   nextWeeklyMessageAt: timestamp("next_weekly_message_at"),
 
+  // ODPC Data Protection Act (2019) Section 32/46: Explicit health-data consent tracking
+  consentStatus: varchar("consent_status", { length: 20 }).default("GRANTED").notNull(), // GRANTED, PENDING, REVOKED
+  consentRecordedAt: timestamp("consent_recorded_at").defaultNow(),
+  consentChannel: varchar("consent_channel", { length: 30 }).default("VERBAL_CLINIC"), // VERBAL_CLINIC, WRITTEN_ANC, USSD_OPT_IN, SMS_OPT_IN, REVOKED_BY_PATIENT
+  consentVersion: varchar("consent_version", { length: 20 }).default("ODPC-2026-v1"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

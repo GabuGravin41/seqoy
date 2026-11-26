@@ -18,29 +18,29 @@ type BadgeVariant =
   | 'CRITICAL_EMERGENCY';
 
 const variantMap: Record<BadgeVariant, { bg: string; text: string; dot: string }> = {
-  CRITICAL: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
-  CRITICAL_EMERGENCY: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
-  HIGH: { bg: 'bg-high/15', text: 'text-high', dot: 'bg-high' },
-  ELEVATED_RISK: { bg: 'bg-high/15', text: 'text-high', dot: 'bg-high' },
-  MODERATE: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
-  LOW: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  NORMAL: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  AVAILABLE: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  LIMITED: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
-  FULL: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
+  CRITICAL: { bg: 'bg-scarlet-soft', text: 'text-scarlet', dot: 'bg-scarlet' },
+  CRITICAL_EMERGENCY: { bg: 'bg-scarlet-soft', text: 'text-scarlet', dot: 'bg-scarlet' },
+  HIGH: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-600' },
+  ELEVATED_RISK: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-600' },
+  MODERATE: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-600' },
+  LOW: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  NORMAL: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  AVAILABLE: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  LIMITED: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-600' },
+  FULL: { bg: 'bg-scarlet-soft', text: 'text-scarlet', dot: 'bg-scarlet' },
   OFFLINE: { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
-  REQUESTED: { bg: 'bg-info/15', text: 'text-info', dot: 'bg-info' },
-  ACKNOWLEDGED: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
-  ACCEPTED: { bg: 'bg-primary/15', text: 'text-primary', dot: 'bg-primary' },
-  ADMITTED: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  COMPLETED: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  DECLINED: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
+  REQUESTED: { bg: 'bg-secondary', text: 'text-foreground', dot: 'bg-foreground' },
+  ACKNOWLEDGED: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-600' },
+  ACCEPTED: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  ADMITTED: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  COMPLETED: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  DECLINED: { bg: 'bg-scarlet-soft', text: 'text-scarlet', dot: 'bg-scarlet' },
   DRAFT: { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
-  ACTIVE: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
+  ACTIVE: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
   INACTIVE: { bg: 'bg-muted', text: 'text-muted-foreground', dot: 'bg-muted-foreground' },
-  READY: { bg: 'bg-low/15', text: 'text-low', dot: 'bg-low' },
-  OCCUPIED: { bg: 'bg-critical/15', text: 'text-critical', dot: 'bg-critical' },
-  MAINTENANCE: { bg: 'bg-moderate/15', text: 'text-moderate', dot: 'bg-moderate' },
+  READY: { bg: 'bg-jungle-soft', text: 'text-jungle', dot: 'bg-jungle' },
+  OCCUPIED: { bg: 'bg-scarlet-soft', text: 'text-scarlet', dot: 'bg-scarlet' },
+  MAINTENANCE: { bg: 'bg-amber-50', text: 'text-amber-800', dot: 'bg-amber-600' },
 };
 
 interface StatusBadgeProps {
@@ -52,12 +52,12 @@ interface StatusBadgeProps {
 
 export default function StatusBadge({ status, label, showDot = true, size = 'sm' }: StatusBadgeProps) {
   const styles = variantMap[status] ?? variantMap.OFFLINE;
-  const displayLabel = label ?? status.replace('_', ' ');
+  const displayLabel = label ?? status.replace(/_/g, ' ');
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full font-medium ${styles.bg} ${styles.text} ${
-        size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-3 py-1 text-xs'
+      className={`inline-flex items-center gap-1.5 rounded-md font-semibold tracking-tight ${styles.bg} ${styles.text} ${
+        size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs'
       }`}
     >
       {showDot && <span className={`w-1.5 h-1.5 rounded-full ${styles.dot} flex-shrink-0`} />}

@@ -40,6 +40,12 @@ export interface Patient {
   nextCallAt?: string;
   nextWeeklyMessageAt?: string;
 
+  // ODPC Data Protection Act (2019) consent tracking
+  consentStatus?: "GRANTED" | "PENDING" | "REVOKED";
+  consentRecordedAt?: string;
+  consentChannel?: "VERBAL_CLINIC" | "WRITTEN_ANC" | "USSD_OPT_IN" | "SMS_OPT_IN" | "REVOKED_BY_PATIENT";
+  consentVersion?: string;
+
   createdAt: string;
 }
 

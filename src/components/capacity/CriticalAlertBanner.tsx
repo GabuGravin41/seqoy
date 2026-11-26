@@ -29,10 +29,10 @@ export default function CriticalAlertBanner() {
       {visible.map((alert) => (
         <div
           key={alert.id}
-          className={`flex items-start gap-3 px-4 py-3 rounded-xl border text-xs font-medium fade-in ${
+          className={`flex items-start gap-3 px-4 py-3 rounded-md border border-l-2 text-xs font-medium fade-in ${
             alert.type === 'critical'
-              ? 'bg-critical/10 border-critical/30 text-critical'
-              : 'bg-accent/10 border-accent/30 text-accent'
+              ? 'bg-scarlet-soft border-crimson-border border-l-scarlet text-scarlet'
+              : 'bg-jungle-soft border-jungle-border border-l-jungle text-jungle'
           }`}
         >
           <Icon

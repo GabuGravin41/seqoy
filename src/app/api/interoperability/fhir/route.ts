@@ -2,8 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createFHIRReferralBundle } from '@/lib/interoperability/fhir';
 import * as referralsRepo from '@/db/repository/referrals';
 import * as patientsRepo from '@/db/repository/patients';
+import { requirePermission, type AuthedActor } from '@/lib/rbac/server';
+import { verifySharedSecret } from '@/lib/security/webhookAuth';
+import { logAudit } from '@/lib/security/audit';
 
 export async function GET(request: NextRequest) {
+  // Accept either a verified HIMS/HIE system secret or an authorized clinician session.
+  const isSystemClient = verifySharedSecret(request, 'HIMS_WEBHOOK_SECRET');
+  let actor: AuthedActor | null = null;
+
+  if (!isSystemClient) {
+    const auth = await requirePermission('canViewAllPatients');
+    if (!auth.ok) return auth.response;
+    actor = auth.actor;
+  }
+
   const { searchParams } = new URL(request.url);
   const referralIdParam = searchParams.get('referralId');
 
@@ -68,6 +81,14 @@ export async function GET(request: NextRequest) {
       dispatchedAt: referral.initiatedAt,
     },
   });
+
+  await logAudit(
+    actor ?? { userId: 'system:hims', role: 'SYSTEM_ADMIN' },
+    'FHIR_BUNDLE_EXPORT',
+    'referral',
+    String(referral.id),
+    { referralCode: referral.referralCode, viaSystemSecret: isSystemClient }
+  );
 
   return NextResponse.json(fhirBundle, {
     headers: {

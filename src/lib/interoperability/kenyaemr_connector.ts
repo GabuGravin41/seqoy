@@ -20,6 +20,10 @@ export interface KenyaEMRConfig {
   username?: string;
   password?: string;
   facilityMflCode: string; // Kenya Master Facility List (KMFL) Code e.g. "13023" (Pumwani)
+  encounterTypeUuid?: string;
+  gestationalAgeConceptUuid?: string;
+  dangerSignConceptUuid?: string;
+  timeoutMs?: number;
 }
 
 export interface KenyaEMRPatientIdentifier {
@@ -40,19 +44,47 @@ export interface KenyaEMREncounterPayload {
   }>;
 }
 
+const DEFAULT_ENCOUNTER_TYPE_UUID = "d7151f82-c1f3-4215-9234-7ad01633534d";
+const DEFAULT_GESTATIONAL_AGE_CONCEPT = "160085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+const DEFAULT_DANGER_SIGN_CONCEPT = "5622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+
 export class KenyaEMRConnector {
   private config: KenyaEMRConfig;
 
   constructor(config?: Partial<KenyaEMRConfig>) {
     this.config = {
-      baseUrl: config?.baseUrl || process.env.KENYAEMR_BASE_URL || "https://demo.kenyaemr.org/openmrs",
-      username: config?.username || process.env.KENYAEMR_USERNAME || "admin",
-      password: config?.password || process.env.KENYAEMR_PASSWORD || "Admin123",
-      facilityMflCode: config?.facilityMflCode || process.env.FACILITY_MFL_CODE || "13023",
+      baseUrl: (config?.baseUrl || process.env.KENYAEMR_BASE_URL || "").replace(/\/+$/, ""),
+      username: config?.username || process.env.KENYAEMR_USERNAME,
+      password: config?.password || process.env.KENYAEMR_PASSWORD,
+      facilityMflCode: config?.facilityMflCode || process.env.FACILITY_MFL_CODE || "",
+      encounterTypeUuid:
+        config?.encounterTypeUuid ||
+        process.env.KENYAEMR_ENCOUNTER_TYPE_UUID ||
+        DEFAULT_ENCOUNTER_TYPE_UUID,
+      gestationalAgeConceptUuid:
+        config?.gestationalAgeConceptUuid ||
+        process.env.KENYAEMR_GESTATIONAL_AGE_CONCEPT ||
+        DEFAULT_GESTATIONAL_AGE_CONCEPT,
+      dangerSignConceptUuid:
+        config?.dangerSignConceptUuid ||
+        process.env.KENYAEMR_DANGER_SIGN_CONCEPT ||
+        DEFAULT_DANGER_SIGN_CONCEPT,
+      timeoutMs: config?.timeoutMs ?? 10000,
     };
   }
 
+  /**
+   * Returns true only when an explicit KenyaEMR endpoint and credentials are
+   * configured. Never falls back to default admin/Admin123 demo credentials.
+   */
+  isConfigured(): boolean {
+    return Boolean(this.config.baseUrl && this.config.username && this.config.password);
+  }
+
   private getAuthHeader(): string {
+    if (!this.isConfigured()) {
+      throw new Error("KenyaEMRConnector is not configured (set KENYAEMR_BASE_URL, KENYAEMR_USERNAME, KENYAEMR_PASSWORD)");
+    }
     const credentials = Buffer.from(`${this.config.username}:${this.config.password}`).toString("base64");
     return `Basic ${credentials}`;
   }
@@ -61,6 +93,10 @@ export class KenyaEMRConnector {
    * Searches for a patient in KenyaEMR by National ID or Phone Number
    */
   async searchPatient(query: string): Promise<any[]> {
+    if (!this.isConfigured()) {
+      console.warn("[KenyaEMRConnector] Skipping patient lookup: connector not configured.");
+      return [];
+    }
     const url = `${this.config.baseUrl}/ws/rest/v1/patient?q=${encodeURIComponent(query)}&v=custom:(uuid,identifiers,person:(display,gender,age,birthdate))`;
     try {
       const res = await fetch(url, {
@@ -68,6 +104,7 @@ export class KenyaEMRConnector {
           Authorization: this.getAuthHeader(),
           Accept: "application/json",
         },
+        signal: AbortSignal.timeout(this.config.timeoutMs ?? 10000),
       });
       if (!res.ok) {
         throw new Error(`KenyaEMR API returned ${res.status}`);
@@ -90,16 +127,23 @@ export class KenyaEMRConnector {
     gestationalWeeks: number;
     urgencyLevel: string;
   }): Promise<{ success: boolean; encounterUuid?: string; error?: string }> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        error: "KenyaEMR connector not configured (missing KENYAEMR_BASE_URL or credentials)",
+      };
+    }
+
     const url = `${this.config.baseUrl}/ws/rest/v1/encounter`;
-    
-    // Construct CIEL observation array
+
+    // Construct CIEL observation array (UUIDs overridable per facility instance)
     const obs = [
       {
-        concept: "160085AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", // Gestational age (CIEL 160085)
+        concept: this.config.gestationalAgeConceptUuid || DEFAULT_GESTATIONAL_AGE_CONCEPT,
         value: referral.gestationalWeeks,
       },
       {
-        concept: "5622AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", // Other maternal danger sign
+        concept: this.config.dangerSignConceptUuid || DEFAULT_DANGER_SIGN_CONCEPT,
         value: referral.clinicalIndication,
       },
     ];
@@ -107,7 +151,7 @@ export class KenyaEMRConnector {
     const payload = {
       encounterDatetime: new Date().toISOString(),
       patient: referral.patientUuid,
-      encounterType: "d7151f82-c1f3-4215-9234-7ad01633534d", // Standard Emergency / Triage Encounter Type
+      encounterType: this.config.encounterTypeUuid || DEFAULT_ENCOUNTER_TYPE_UUID,
       obs,
     };
 
@@ -120,6 +164,7 @@ export class KenyaEMRConnector {
           Accept: "application/json",
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(this.config.timeoutMs ?? 10000),
       });
 
       if (!res.ok) {

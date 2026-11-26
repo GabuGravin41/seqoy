@@ -152,30 +152,38 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="flex flex-col h-screen bg-card border-r border-border transition-all duration-300 ease-in-out flex-shrink-0"
-      style={{ width: collapsed ? 64 : 255 }}
+      className="flex flex-col h-screen bg-background border-r border-border transition-all duration-300 ease-in-out flex-shrink-0"
+      style={{ width: collapsed ? 64 : 252 }}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-border h-16">
+      <Link
+        href="/"
+        aria-label="seqoy home"
+        className="flex items-center gap-2.5 px-4 py-3 border-b border-border h-16 hover:bg-secondary/60 transition-colors"
+      >
         <div className="flex-shrink-0">
-          <AppLogo size={32} />
+          <AppLogo size={34} />
         </div>
         {!collapsed && (
-          <div className="flex flex-col">
-            <span className="font-bold text-base text-foreground tracking-tight whitespace-nowrap overflow-hidden">
-              SEQOY
+          <div className="flex flex-col pt-0.5">
+            <span className="font-semibold text-xl text-navy dark:text-white tracking-[-0.02em] leading-none whitespace-nowrap overflow-hidden">
+              seqoy
             </span>
-            <span className="text-[10px] text-primary font-medium tracking-wide">Maternal Network</span>
+            <span className="text-[10px] text-muted-foreground font-semibold tracking-[0.12em] uppercase mt-1">
+              Maternal Network
+            </span>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin py-3 px-2">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin py-4 px-2.5">
         {filteredGroups.map((group) => (
-          <div key={`group-${group.groupLabel}`} className="mb-4">
+          <div key={`group-${group.groupLabel}`} className="mb-5">
             {!collapsed && (
-              <p className="stat-label px-2 mb-1 text-[10px]">{group.groupLabel}</p>
+              <p className="px-2.5 mb-1.5 text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+                {group.groupLabel}
+              </p>
             )}
             <ul className="space-y-0.5">
               {group.items.map((item) => {
@@ -186,21 +194,21 @@ export default function Sidebar() {
                     <li key={`nav-${item.label}`}>
                       <button
                         onClick={() => handleNavClick(item)}
-                        className="w-full text-left flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 text-secondary-foreground hover:bg-muted hover:text-foreground group relative"
+                        className="w-full text-left flex items-center gap-3 px-2.5 py-2 rounded-md text-[13px] font-medium transition-colors duration-150 text-foreground/75 hover:bg-secondary hover:text-foreground group relative"
                       >
                         <span className="flex-shrink-0">
                           <Icon
                             name={item.icon as Parameters<typeof Icon>[0]['name']}
-                            size={18}
+                            size={17}
                             variant="outline"
-                            className="text-primary"
+                            className="text-jungle"
                           />
                         </span>
                         {!collapsed && (
                           <span className="flex-1 whitespace-nowrap">{item.label}</span>
                         )}
                         {collapsed && (
-                          <span className="absolute left-full ml-2 px-2 py-1 bg-muted text-foreground text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-50 border border-border">
+                          <span className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
                             {item.label}
                           </span>
                         )}
@@ -213,18 +221,18 @@ export default function Sidebar() {
                   <li key={`nav-${item.href}-${item.label}`}>
                     <Link
                       href={item.href || '#'}
-                      className={`flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 group relative ${
+                      className={`flex items-center gap-3 px-2.5 py-2 rounded-md text-[13px] transition-colors duration-150 group relative ${
                         isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-secondary-foreground hover:bg-muted hover:text-foreground'
+                          ? 'bg-scarlet-soft text-scarlet font-bold border-l-2 border-scarlet rounded-l-none'
+                          : 'font-medium text-foreground/75 hover:bg-secondary hover:text-foreground'
                       }`}
                     >
                       <span className="flex-shrink-0">
                         <Icon
                           name={item.icon as Parameters<typeof Icon>[0]['name']}
-                          size={18}
+                          size={17}
                           variant={isActive ? 'solid' : 'outline'}
-                          className={isActive ? 'text-primary' : ''}
+                          className={isActive ? 'text-scarlet' : 'text-foreground/55 group-hover:text-foreground'}
                         />
                       </span>
                       {!collapsed && (
@@ -232,7 +240,7 @@ export default function Sidebar() {
                           <span className="flex-1 whitespace-nowrap">{item.label}</span>
                           {item.badge !== undefined && (
                             <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                                 badgeColors[item.badgeVariant ?? 'info']
                               }`}
                             >
@@ -242,10 +250,10 @@ export default function Sidebar() {
                         </>
                       )}
                       {collapsed && item.badge !== undefined && (
-                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-critical" />
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-scarlet" />
                       )}
                       {collapsed && (
-                        <span className="absolute left-full ml-2 px-2 py-1 bg-muted text-foreground text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-50 border border-border">
+                        <span className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-50">
                           {item.label}
                         </span>
                       )}
@@ -259,61 +267,51 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom User Profile & Facility Badge */}
-      <div className="border-t border-border p-2.5 space-y-1.5">
-        {/* Clinician Card */}
+      <div className="border-t border-border p-3 space-y-1.5">
         <Link
           href="/profile"
-          className="w-full flex items-center gap-2.5 p-2 rounded-xl bg-muted/40 hover:bg-muted border border-border transition text-left group"
+          className="w-full flex items-center gap-2.5 p-2 rounded-md bg-secondary/60 hover:bg-secondary border border-border transition text-left group"
           title="View Clinical Profile & Credentials"
         >
-          <div
-            className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 border ${currentUser.avatarColor}`}
-          >
+          <div className="w-8 h-8 rounded-md bg-jungle text-white flex items-center justify-center font-bold text-xs shrink-0">
             {currentUser.avatarInitials}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition">
+              <p className="text-xs font-bold text-foreground truncate group-hover:text-scarlet transition">
                 {currentUser.name}
               </p>
-              <p className="text-[10px] text-muted-foreground truncate">{currentUser.roleTitle}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{currentUser.roleTitle}</p>
             </div>
           )}
         </Link>
 
-        {/* Quick Phone Handset Trigger */}
         <button
           onClick={() => openDrawer('ussd')}
-          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium text-secondary-foreground hover:bg-muted hover:text-foreground transition-all duration-150 group"
+          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-foreground/75 hover:bg-secondary hover:text-foreground transition-colors"
           title="Open GSM 2G Feature Phone Handset"
         >
-          <Icon name="DevicePhoneMobileIcon" size={16} variant="outline" className="text-primary" />
-          {!collapsed && <span className="text-[11px]">Feature Phone Handset</span>}
+          <Icon name="DevicePhoneMobileIcon" size={15} variant="outline" className="text-jungle" />
+          {!collapsed && <span>Feature Phone Handset</span>}
         </button>
 
-        {/* Day / Night Mode Toggle */}
         <button
           onClick={toggleTheme}
-          className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-xs font-medium text-secondary-foreground hover:bg-muted hover:text-foreground transition-all duration-150 group"
+          className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-foreground/75 hover:bg-secondary hover:text-foreground transition-colors"
           title={`Switch to ${theme === 'dark' ? 'Day' : 'Night'} Mode`}
         >
           <Icon
             name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'}
-            size={16}
+            size={15}
             variant="outline"
-            className={theme === 'dark' ? 'text-amber-400' : 'text-primary'}
+            className="text-foreground/60"
           />
-          {!collapsed && (
-            <span className="text-[11px]">
-              {theme === 'dark' ? 'Day Mode' : 'Night Mode'}
-            </span>
-          )}
+          {!collapsed && <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>}
         </button>
 
-        {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-150 active:scale-95"
+          className="w-full flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <Icon
@@ -321,7 +319,7 @@ export default function Sidebar() {
             size={14}
             variant="outline"
           />
-          {!collapsed && <span className="text-[11px]">Collapse Menu</span>}
+          {!collapsed && <span className="text-[11px] font-medium">Collapse</span>}
         </button>
       </div>
     </aside>

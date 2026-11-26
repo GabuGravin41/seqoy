@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import * as facilitiesRepo from "@/db/repository/facilities";
 import * as capacitiesRepo from "@/db/repository/capacities";
-import { calculateHaversineDistance, estimateEmergencyDriveMinutes } from "@/lib/routing/capacity-matcher";
+import {
+  calculateHaversineDistance,
+  estimateEmergencyDriveMinutes,
+  evaluateCapacityFreshness,
+} from "@/lib/routing/capacity-matcher";
 import { requirePermission } from "@/lib/rbac/server";
 import { hasPermission } from "@/lib/rbac/permissions";
 import { logAudit } from "@/lib/security/audit";
@@ -31,6 +35,7 @@ export async function GET(req: NextRequest) {
       );
       estimatedDriveMinutes = estimateEmergencyDriveMinutes(distanceKm);
     }
+    const { ageHours: dataAgeHours, freshnessStatus } = evaluateCapacityFreshness(cap.lastUpdated);
     return {
       ...cap,
       facilityName: facility?.name || `Hospital #${cap.facilityId}`,
@@ -40,6 +45,8 @@ export async function GET(req: NextRequest) {
       emergencyPhone: facility?.emergencyPhone || "+254700000000",
       distanceKm,
       estimatedDriveMinutes,
+      dataAgeHours,
+      freshnessStatus,
     };
   });
 

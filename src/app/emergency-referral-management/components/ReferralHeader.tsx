@@ -6,14 +6,17 @@ import { toast } from 'sonner';
 
 export default function ReferralHeader() {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-6 border-b border-border">
       <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Facility Referral Management</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          Referrals sent to hospitals with confirmed capacity, and MoH MPDSR compliance — Nairobi Region
+        <p className="text-[11px] font-bold tracking-[0.16em] text-jungle uppercase">Delay 3 · Verified Transfers</p>
+        <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-foreground tracking-[-0.025em]">
+          Facility Referral Management
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Verified referrals with confirmed capacity, MOH 268 slips, and MPDSR audit tracking.
         </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         <button
           onClick={() => toast.success('Generating County MPDSR Audit Report...')}
           className="btn-secondary text-xs"

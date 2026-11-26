@@ -3,65 +3,65 @@
 @tailwind utilities;
 
 :root, .light {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
-  --primary: #0D9488;
+  --background: #FFFFFF;
+  --foreground: #1F274B;
+  --primary: #A61C26;
   --primary-foreground: #FFFFFF;
-  --secondary: #F1F5F9;
-  --secondary-foreground: #334155;
-  --accent: #EA580C;
+  --secondary: #F8FAFC;
+  --secondary-foreground: #1F274B;
+  --accent: #1F274B;
   --accent-foreground: #FFFFFF;
-  --muted: #E2E8F0;
-  --muted-foreground: #64748B;
+  --muted: #F1F5F9;
+  --muted-foreground: #475569;
   --card: #FFFFFF;
-  --card-foreground: #0F172A;
+  --card-foreground: #1F274B;
   --border: #E2E8F0;
   --input: #FFFFFF;
-  --ring: #0D9488;
-  --radius: 10px;
-  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --ring: #A61C26;
+  --radius: 6px;
+  --font-sans: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  --critical: #DC2626;
-  --critical-bg: #FEF2F2;
-  --high: #EA580C;
-  --high-bg: #FFF7ED;
-  --moderate: #CA8A04;
-  --moderate-bg: #FEFCE8;
-  --low: #0D9488;
-  --low-bg: #F0FDFA;
-  --info: #2563EB;
-  --info-bg: #EFF6FF;
+  --critical: #A61C26;
+  --critical-bg: #FDF2F3;
+  --high: #B45309;
+  --high-bg: #FEF7EC;
+  --moderate: #8C6214;
+  --moderate-bg: #FBF8EE;
+  --low: #1F274B;
+  --low-bg: #EEF1F7;
+  --info: #1F274B;
+  --info-bg: #EEF1F7;
 }
 
 .dark {
-  --background: #0A0F1E;
-  --foreground: #F0F4FF;
-  --primary: #00C896;
-  --primary-foreground: #001A12;
-  --secondary: #1A2340;
-  --secondary-foreground: #A8B4D0;
-  --accent: #F97316;
-  --accent-foreground: #1A0A00;
-  --muted: #1E2A3F;
-  --muted-foreground: #6B7A99;
-  --card: #111827;
-  --card-foreground: #F0F4FF;
-  --border: #1E2D45;
-  --input: #1A2340;
-  --ring: #00C896;
-  --radius: 10px;
-  --font-sans: var(--font-dm-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --background: #111828;
+  --foreground: #F8FAFC;
+  --primary: #BE2324;
+  --primary-foreground: #FFFFFF;
+  --secondary: #182236;
+  --secondary-foreground: #E2E8F0;
+  --accent: #33416B;
+  --accent-foreground: #FFFFFF;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --card: #151E30;
+  --card-foreground: #F8FAFC;
+  --border: #26324A;
+  --input: #182236;
+  --ring: #DC2626;
+  --radius: 6px;
+  --font-sans: var(--font-manrope), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  --critical: #EF4444;
-  --critical-bg: #2D0F0F;
-  --high: #F97316;
-  --high-bg: #2D1800;
-  --moderate: #EAB308;
-  --moderate-bg: #2D2500;
-  --low: #00C896;
-  --low-bg: #002D20;
-  --info: #3B82F6;
-  --info-bg: #0F1D35;
+  --critical: #DC2626;
+  --critical-bg: #2D1216;
+  --high: #D97706;
+  --high-bg: #291B0B;
+  --moderate: #CA8A04;
+  --moderate-bg: #26200B;
+  --low: #93A8D8;
+  --low-bg: #1B2540;
+  --info: #93A8D8;
+  --info-bg: #1B2540;
 }
 
 @layer base {
@@ -93,8 +93,9 @@
   }
 
   .text-hero-metric {
-    font-size: clamp(1.75rem, 3vw, 2.25rem);
-    font-weight: 700;
+    font-size: clamp(1.75rem, 2.8vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
   }
 
@@ -117,25 +118,26 @@
     border-radius: 2px;
   }
 
+  /* Clean flat hairline elevations — zero neon SaaS glows */
   .card-glow-primary {
-    box-shadow: 0 0 0 1px var(--border), 0 4px 20px rgba(0, 200, 150, 0.05);
+    box-shadow: none;
   }
 
   .card-glow-critical {
-    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.25), 0 4px 20px rgba(239, 68, 68, 0.06);
+    box-shadow: none;
   }
 
   .card-glow-warning {
-    box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.25), 0 4px 20px rgba(249, 115, 22, 0.06);
+    box-shadow: none;
   }
 
   .pulse-dot {
-    animation: pulse-dot 2s ease-in-out infinite;
+    animation: pulse-dot 2.2s ease-in-out infinite;
   }
 
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.5; transform: scale(0.85); }
+    50% { opacity: 0.45; transform: scale(0.88); }
   }
 
   .fade-in {
@@ -159,30 +161,30 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-scarlet text-white text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-jungle active:translate-y-0 disabled:opacity-40 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium border border-border transition-all duration-150 hover:bg-muted active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-background text-foreground text-sm font-semibold border border-border transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/40 active:translate-y-0;
   }
 
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-critical text-white text-sm font-semibold transition-all duration-150 hover:opacity-90 active:scale-95 shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-scarlet text-white text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:bg-scarlet-deep active:translate-y-0;
   }
 
   .input-field {
-    @apply w-full px-3 py-2 bg-input border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-150;
+    @apply w-full px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-scarlet focus:border-scarlet transition-all duration-150;
   }
 
   .stat-label {
-    @apply text-xs font-medium tracking-wide text-muted-foreground uppercase;
+    @apply text-[11px] font-bold tracking-[0.14em] text-muted-foreground uppercase;
   }
 
   .section-header {
-    @apply text-lg font-semibold text-foreground;
+    @apply text-lg font-extrabold tracking-[-0.02em] text-foreground;
   }
 
   .card-base {
-    @apply bg-card border border-border rounded-xl p-5 card-glow-primary;
+    @apply bg-card border border-border rounded-md p-5;
   }
 }

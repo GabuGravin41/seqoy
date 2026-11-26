@@ -6,6 +6,7 @@ import * as facilitiesRepo from "@/db/repository/facilities";
 import * as capacitiesRepo from "@/db/repository/capacities";
 import { requirePermission } from "@/lib/rbac/server";
 import { logAudit } from "@/lib/security/audit";
+import { toPatientInitials } from "@/lib/security/privacy";
 
 const dispatchAlertSchema = z.object({
   referralId: z.coerce.number().int(),
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
 🏥 *Destination:* ${receivingFacility?.name || "Receiving Hospital"} Labor Ward / Casualty
 ⏱️ *ETA:* ~${eta} Mins | Ambul: ${body.ambulancePlate || "County EMS"} (Driver: ${body.driverPhone || "N/A"})
 
-👩 *Patient:* ${patient?.fullName || "Expectant Mother"}, ${patient?.age || 26}yo (G${patient?.gravida || 1}P${patient?.parity || 0}, ${patient?.gestationalWeeks || 34} wks)
+👩 *Patient:* ${toPatientInitials(patient?.fullName)}, ${patient?.age || 26}yo (G${patient?.gravida || 1}P${patient?.parity || 0}, ${patient?.gestationalWeeks || 34} wks)
 🩸 *Blood Group:* ${patient?.bloodType || "O+"}
 📋 *Indication:* ${referral.clinicalIndication.replace(/_/g, " ")}
 ${referral.acuityOverrideReason ? `⚠️ *Override Justification:* ${referral.acuityOverrideReason}\n` : ""}

@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { SignOutButton } from '@clerk/nextjs';
-import { useCurrentUser } from '@/context/AuthContext';
+import { useAuth, useCurrentUser } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import Icon from '@/components/ui/AppIcon';
 import { toast } from 'sonner';
@@ -20,6 +19,7 @@ export default function UserProfilePage() {
 // AppLayout's children, which is why this isn't in the page's top-level body.
 function ProfilePageBody() {
   const currentUser = useCurrentUser();
+  const { signOut } = useAuth();
   const { theme, setTheme } = useTheme();
   const [isOnDuty, setIsOnDuty] = useState(true);
   const [smsAlerts, setSmsAlerts] = useState(true);
@@ -80,12 +80,14 @@ function ProfilePageBody() {
               <Icon name="CheckIcon" size={14} variant="outline" />
               Save Changes
             </button>
-            <SignOutButton>
-              <button className="btn-secondary text-xs text-critical hover:bg-critical/10 border-critical/30">
-                <Icon name="ArrowRightOnRectangleIcon" size={14} variant="outline" />
-                Sign Out
-              </button>
-            </SignOutButton>
+            <button
+              type="button"
+              onClick={signOut}
+              className="btn-secondary text-xs text-critical hover:bg-critical/10 border-critical/30"
+            >
+              <Icon name="ArrowRightOnRectangleIcon" size={14} variant="outline" />
+              Sign Out
+            </button>
           </div>
         </div>
 

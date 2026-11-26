@@ -1,0 +1,57 @@
+{
+  "brand": "seqoy",
+  "repository": "https://github.com/GabuGravin41/seqoy",
+  "colors": {
+    "light": {
+      "primaryAccent": {
+        "name": "Pulse Crimson",
+        "hex": "#A61C26"
+      },
+      "primaryDark": {
+        "name": "Deep Navy",
+        "hex": "#1F274B"
+      },
+      "surface": {
+        "name": "Pure White",
+        "hex": "#FFFFFF"
+      }
+    },
+    "dark": {
+      "primaryAccent": {
+        "name": "Bright Crimson",
+        "hex": "#BE2324"
+      },
+      "uiAccent": {
+        "name": "Alert Crimson",
+        "hex": "#DC2626"
+      },
+      "foreground": {
+        "name": "Pure White",
+        "hex": "#FFFFFF"
+      },
+      "surface": {
+        "name": "Deep Slate",
+        "hex": "#111828"
+      }
+    }
+  },
+  "typography": {
+    "wordmark": "seqoy",
+    "case": "lowercase",
+    "recommendedFonts": [
+      "Plus Jakarta Sans",
+      "Inter",
+      "Space Grotesk"
+    ],
+    "weights": [
+      500,
+      600
+    ],
+    "letterSpacing": "-0.02em"
+  },
+  "spacing": {
+    "clearSpaceRatio": 0.25,
+    "minDigitalHeightPx": 32,
+    "minHorizontalWidthPx": 100
+  }
+}

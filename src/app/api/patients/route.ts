@@ -37,6 +37,9 @@ const newPatientSchema = z.object({
   preferredCheckinHour: z.coerce.number().int().min(0).max(23).optional(),
   contactChannel: z.enum(["WHATSAPP", "SMS"]).optional(),
   whatsappNumber: z.string().optional(),
+  consentStatus: z.enum(["GRANTED", "PENDING", "REVOKED"]).optional(),
+  consentChannel: z.enum(["VERBAL_CLINIC", "WRITTEN_ANC", "USSD_OPT_IN", "SMS_OPT_IN", "REVOKED_BY_PATIENT"]).optional(),
+  consentVersion: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {

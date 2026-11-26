@@ -3,6 +3,8 @@ import * as patientsRepo from "@/db/repository/patients";
 import { triggerOutboundTriageCall, sendWhatsAppMessage } from "@/lib/telephony/twilio";
 import { sendSMS } from "@/lib/telephony/africastalking";
 import { getWeeklyMessage } from "@/lib/scheduling/weekly-content";
+import { verifyCronSecret } from "@/lib/security/webhookAuth";
+import { hasActiveOutreachConsent } from "@/lib/security/privacy";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +17,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (!verifyCronSecret(request)) {
       return NextResponse.json({ error: "Unauthorized cron invocation" }, { status: 401 });
     }
 
@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     const callResults = [];
     for (const mother of dueForCall) {
+      if (!hasActiveOutreachConsent(mother)) continue;
       const language = mother.preferredLanguage === "ENGLISH" ? "en" : "sw";
       const callResult = await triggerOutboundTriageCall({
         toPhoneNumber: mother.phoneNumber,
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
 
     const messageResults = [];
     for (const mother of dueForMessage) {
+      if (!hasActiveOutreachConsent(mother)) continue;
       const language = mother.preferredLanguage === "ENGLISH" ? "ENGLISH" : "SWAHILI";
       const content = getWeeklyMessage(mother.gestationalWeeks, language);
 
