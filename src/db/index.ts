@@ -4,7 +4,11 @@ import { drizzle as drizzlePg } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
-const connectionString = process.env.DATABASE_URL || "";
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.STORAGE_DATABASE_URL ||
+  process.env.STORAGE_POSTGRES_URL ||
+  "";
 const isNeonUrl = /neon\.tech/i.test(connectionString);
 
 if (process.env.NODE_ENV === "development") {
