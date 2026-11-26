@@ -31,8 +31,13 @@ const memoryProfiles = new Map<string, UserProfile>();
 export async function getUserProfile(clerkUserId: string): Promise<UserProfile | undefined> {
   const db = getDb();
   if (!db) return memoryProfiles.get(clerkUserId);
-  const [row] = await db.select().from(schema.userProfiles).where(eq(schema.userProfiles.id, clerkUserId));
-  return row ? rowToProfile(row) : undefined;
+  try {
+    const [row] = await db.select().from(schema.userProfiles).where(eq(schema.userProfiles.id, clerkUserId));
+    return row ? rowToProfile(row) : undefined;
+  } catch (err: any) {
+    console.warn("[users.ts] getUserProfile DB fallback:", err?.message);
+    return memoryProfiles.get(clerkUserId);
+  }
 }
 
 export async function createUserProfile(input: {
@@ -55,12 +60,18 @@ export async function createUserProfile(input: {
     return profile;
   }
 
-  const [row] = await db
-    .insert(schema.userProfiles)
-    .values({ id: profile.id, email: profile.email, fullName: profile.fullName, role: profile.role })
-    .onConflictDoNothing()
-    .returning();
-  return row ? rowToProfile(row) : profile;
+  try {
+    const [row] = await db
+      .insert(schema.userProfiles)
+      .values({ id: profile.id, email: profile.email, fullName: profile.fullName, role: profile.role })
+      .onConflictDoNothing()
+      .returning();
+    return row ? rowToProfile(row) : profile;
+  } catch (err: any) {
+    console.warn("[users.ts] createUserProfile DB fallback:", err?.message);
+    memoryProfiles.set(profile.id, profile);
+    return profile;
+  }
 }
 
 export async function updateUserRole(
